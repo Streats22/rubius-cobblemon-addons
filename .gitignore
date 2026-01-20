@@ -24,3 +24,8 @@ runs
 run-data
 
 repo
+
+# Dependencies - JAR files should not be committed
+libs/*.jar
+!libs/README.md
+!gradle/wrapper/gradle-wrapper.jar
