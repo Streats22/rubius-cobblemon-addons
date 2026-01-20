@@ -18,7 +18,34 @@ version = mod_version
 group = mod_group_id
 
 repositories {
-    // Add here additional repositories if required by some of the dependencies below.
+    // Create Maven - Official Create repository
+    maven {
+        name = "Create Maven"
+        url = "https://maven.createmod.net"
+    }
+    // Registrate Maven (for Create dependencies)
+    maven {
+        name = "Registrate"
+        url = "https://maven.ithundxr.dev/snapshots"
+    }
+    // CurseForge Maven - for JEI and other mods
+    maven {
+        name = "CurseMaven"
+        url = "https://cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
+    // JEI Maven
+    maven {
+        name = "JEI"
+        url = "https://maven.blamejared.com"
+    }
+    // KotlinForge Maven - Required for Cobblemon (Kotlin language provider)
+    maven {
+        name = "KotlinForge"
+        url = "https://maven.shedaniel.me"
+    }
 }
 
 base {
@@ -112,23 +139,50 @@ configurations {
 }
 
 dependencies {
-    // Example optional mod dependency with JEI
-    // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
-    // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
-    // compileOnly "mezz.jei:jei-${mc_version}-neoforge-api:${jei_version}"
-    // We add the full version to localRuntime, not runtimeOnly, so that we do not publish a dependency on it
-    // localRuntime "mezz.jei:jei-${mc_version}-neoforge:${jei_version}"
-
-    // Example mod dependency using a mod jar from ./libs with a flat dir repository
-    // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
-    // The group id is ignored when searching -- in this case, it is "blank"
-    // implementation "blank:coolmod-${mc_version}:${coolmod_version}"
-
-    // Example mod dependency using a file as dependency
-    // implementation files("libs/coolmod-${mc_version}-${coolmod_version}.jar")
-
-    // Example project dependency using a sister or child project:
-    // implementation project(":myproject")
+    // Create - Required for Create integrations
+    // Create 6.0.9 for MC 1.21.1 NeoForge
+    implementation("com.simibubi.create:create-${minecraft_version}:6.0.9-215:slim") {
+        transitive = false
+    }
+    implementation("net.createmod.ponder:ponder-neoforge:1.0.81+mc${minecraft_version}")
+    compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:1.0.6")
+    localRuntime("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:1.0.6")
+    implementation("com.tterrag.registrate:Registrate:MC1.21-1.3.0+67")
+    
+    // Cobblemon 1.7.1 - Required for Cobblemon integrations
+    // Source: https://gitlab.com/cable-mc/cobblemon/-/tree/1.7.1 (Open Source - MPL 2.0)
+    // 
+    // Option 1: Build from source (recommended for development)
+    //   Run: ./setup-cobblemon.sh
+    //   This will clone and build Cobblemon, then copy the JAR to libs/
+    //
+    // Option 2: Download pre-built JAR
+    //   Download from:
+    //   - CurseForge: https://www.curseforge.com/minecraft/mc-mods/cobblemon/files
+    //   - Modrinth: https://modrinth.com/mod/cobblemon
+    //   Place the NeoForge JAR for MC 1.21.1 in libs/ folder
+    
+    compileOnly files("libs/cobblemon-1.7.1-neoforge.jar")
+    localRuntime files("libs/cobblemon-1.7.1-neoforge.jar")
+    
+    // Note: If the JAR has a different filename, adjust the path above
+    
+    // KotlinForge - Required language provider for Cobblemon (Kotlin mods)
+    // Cobblemon requires kotlinforforge:5.3 or above
+    // IMPORTANT: Language providers must be in run/mods/ folder at runtime
+    // Download from: https://www.curseforge.com/minecraft/mc-mods/kotlin-for-forge/files
+    // Get NeoForge version for MC 1.21.1, version 5.3 or above
+    // Place it in run/mods/ folder manually, or use CurseForge Maven:
+    // Find the file ID on CurseForge and uncomment below:
+    // localRuntime "curse.maven:kotlin-for-forge-351264:XXXXXX" // Replace XXXXXX with file ID
+    
+    // JEI - Optional dependency for recipe viewing and tooltips
+    // Using CurseForge Maven for JEI
+    // JEI for MC 1.21.1 NeoForge - file ID 5801614 (update if newer version available)
+    // Note: This includes both API and runtime. If you need separate API, use:
+    // compileOnly "curse.maven:jei-238222:5801614"
+    // localRuntime "curse.maven:jei-238222:5801614"
+    implementation "curse.maven:jei-238222:5801614"
 
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
