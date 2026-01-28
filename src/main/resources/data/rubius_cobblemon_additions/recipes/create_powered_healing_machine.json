@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " C ",
+    "LHL",
+    " C "
+  ],
+  "key": {
+    "C": {
+      "item": "create:cogwheel"
+    },
+    "L": {
+      "item": "create:large_cogwheel"
+    },
+    "H": {
+      "item": "cobblemon:healing_machine"
+    }
+  },
+  "result": {
+    "id": "rubius_cobblemon_additions:create_powered_healing_machine",
+    "count": 1
+  }
+}
