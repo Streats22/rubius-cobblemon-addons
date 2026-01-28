@@ -19,6 +19,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.ModList;
 import nl.streats1.rubiusaddons.RubiusCobblemonAdditions;
+import nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,10 +33,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
-/**
- * Block entity for the Create-powered healing machine.
- * Integrates Create's rotation system with Cobblemon's healing machine functionality.
- */
+    /**
+     * Block entity for the Create-powered healing machine.
+     * Integrates Create's shaft rotation system with Cobblemon's healing machine functionality.
+     * Accepts RPM input from bottom, left, and right sides via shaft connections.
+     */
 public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     
     // SU (Stress Units) thresholds for recharge time reduction
@@ -44,9 +46,73 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     private static final int MAX_SU_FOR_INSTANT = 1024; // SU for instant recharge
     
     // Recharge time constants (in seconds)
-    private static final int BASE_RECHARGE_TIME = 900; // 15 minutes at 0 SU
+    // Try to get the actual recharge time from Cobblemon's healing machine
+    private static final int BASE_RECHARGE_TIME = getCobblemonRechargeTime(); // Match Cobblemon's default recharge time
     private static final int MIN_RECHARGE_TIME = 350; // ~5.8 minutes at MIN_SU+ SU
     private static final int INSTANT_RECHARGE_TIME = 0; // Instant at MAX_SU SU
+    
+    /**
+     * Attempts to get the recharge time from Cobblemon's healing machine block entity.
+     * Falls back to 300 seconds (5 minutes) if not found, which is a common default.
+     */
+    private static int getCobblemonRechargeTime() {
+        if (!ModList.get().isLoaded("cobblemon")) {
+            return 300; // Default fallback: 5 minutes
+        }
+        
+        try {
+            // Try to find Cobblemon's healing machine block entity class
+            Class<?> healingMachineClass = Class.forName("com.cobblemon.mod.common.block.entity.HealingMachineBlockEntity");
+            
+            // Try to get a static field or method that contains the recharge time
+            // Common field names: RECHARGE_TIME, COOLDOWN_TIME, RECHARGE_TICKS, etc.
+            String[] possibleFieldNames = {"RECHARGE_TIME", "COOLDOWN_TIME", "RECHARGE_TICKS", "COOLDOWN_TICKS", "RECHARGE_TIME_SECONDS"};
+            
+            for (String fieldName : possibleFieldNames) {
+                try {
+                    var field = healingMachineClass.getField(fieldName);
+                    Object value = field.get(null); // Static field
+                    if (value instanceof Number) {
+                        int ticks = ((Number) value).intValue();
+                        // Convert ticks to seconds if needed (assume it's in ticks if > 1000, seconds if < 1000)
+                        if (ticks > 1000) {
+                            return ticks / 20; // Convert ticks to seconds
+                        } else {
+                            return ticks; // Already in seconds
+                        }
+                    }
+                } catch (NoSuchFieldException | IllegalAccessException e) {
+                    // Try next field name
+                }
+            }
+            
+            // Try to find a method that returns recharge time
+            String[] possibleMethodNames = {"getRechargeTime", "getCooldownTime", "getRechargeTicks", "getCooldownTicks"};
+            for (String methodName : possibleMethodNames) {
+                try {
+                    var method = healingMachineClass.getMethod(methodName);
+                    Object result = method.invoke(null); // Static method
+                    if (result instanceof Number) {
+                        int ticks = ((Number) result).intValue();
+                        if (ticks > 1000) {
+                            return ticks / 20; // Convert ticks to seconds
+                        } else {
+                            return ticks; // Already in seconds
+                        }
+                    }
+                } catch (NoSuchMethodException | IllegalAccessException | java.lang.reflect.InvocationTargetException e) {
+                    // Try next method name
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            // Cobblemon class not found, use default
+        } catch (Exception e) {
+            // Any other error, use default
+        }
+        
+        // Default fallback: 5 minutes (300 seconds) - a common value for healing machines
+        return 300;
+    }
     
     // Cache for reflection results to avoid repeated lookups and log spam
     private static final Map<String, Boolean> REFLECTION_CACHE = new ConcurrentHashMap<>();
@@ -56,11 +122,19 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     // Current Stress Units (SU) from Create rotation system
     private float currentSU = 0.0f;
     
+    // Current RPM (rotation speed) from Create rotation system (for goggles display)
+    private float currentRPM = 0.0f;
+    
     // Healing progress tracking
     private long healingStartTime = 0;
     private boolean isHealing = false;
     private Player healingPlayer = null; // Track which player is being healed
     private UUID healingPlayerUUID = null; // Store UUID for persistence
+    
+    // Pokeball data for client-side rendering (synced from server)
+    // Store pokeball ResourceLocation names (like Cobblemon does) instead of ItemStacks
+    // This matches Cobblemon's approach: Map<Int, PokeBall> stored as ResourceLocation strings
+    private java.util.Map<Integer, net.minecraft.resources.ResourceLocation> healingPokeballNames = new java.util.HashMap<>();
     
     // Recharge tracking (time when healing completed, used to calculate recharge cooldown)
     private long rechargeStartTime = 0; // Game time when recharge started (after healing completed)
@@ -75,7 +149,13 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
         }
         
         // Update SU from Create rotation system
+        float oldSU = blockEntity.currentSU;
         blockEntity.updateSU(level, pos);
+        
+        // Update block state if SU changed (to update color from red to yellow)
+        if (Math.abs(oldSU - blockEntity.currentSU) > 0.1f) {
+            blockEntity.updateBlockState(blockEntity.isHealing);
+        }
         
         // Handle healing logic if Cobblemon is loaded
         if (ModList.get().isLoaded("cobblemon")) {
@@ -87,6 +167,8 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     /**
      * Updates the current SU (Stress Units) by checking Create's rotation system.
      * SU represents the stress capacity/usage of the rotation network.
+     * Only checks for shaft connections from bottom, left, and right sides.
+     * Left and right are relative to the block's facing direction.
      */
     private void updateSU(Level level, BlockPos pos) {
         if (!ModList.get().isLoaded("create")) {
@@ -94,87 +176,139 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             return;
         }
         
-        // Check for rotation sources from Create
-        // We'll check all 6 directions for rotation sources
-        float maxSU = 0.0f;
+        // Get the block's facing direction to determine left/right
+        BlockState state = getBlockState();
+        Direction facing = Direction.NORTH; // Default
+        if (state.hasProperty(CreatePoweredHealingMachineBlock.FACING)) {
+            facing = state.getValue(CreatePoweredHealingMachineBlock.FACING);
+        }
         
-        for (Direction direction : Direction.values()) {
-            BlockPos checkPos = pos.relative(direction);
-            float su = getSUFromCreate(level, checkPos, direction.getOpposite());
-            if (su > maxSU) {
-                maxSU = su;
-            }
+        // Calculate left and right directions relative to facing
+        Direction left = facing.getCounterClockWise();  // Left side relative to facing
+        Direction right = facing.getClockWise();       // Right side relative to facing
+        
+        // Check for shaft connections from bottom, left, and right only
+        float maxSU = 0.0f;
+        float maxRPM = 0.0f;
+        
+        // Bottom (DOWN) - always below the block
+        BlockPos bottomPos = pos.below();
+        float[] bottomData = getSUAndRPMFromShaft(level, bottomPos, Direction.UP);
+        if (bottomData[0] > maxSU) {
+            maxSU = bottomData[0];
+            maxRPM = bottomData[1];
+        }
+        
+        // Left side (relative to facing direction)
+        BlockPos leftPos = pos.relative(left);
+        float[] leftData = getSUAndRPMFromShaft(level, leftPos, left.getOpposite());
+        if (leftData[0] > maxSU) {
+            maxSU = leftData[0];
+            maxRPM = leftData[1];
+        }
+        
+        // Right side (relative to facing direction)
+        BlockPos rightPos = pos.relative(right);
+        float[] rightData = getSUAndRPMFromShaft(level, rightPos, right.getOpposite());
+        if (rightData[0] > maxSU) {
+            maxSU = rightData[0];
+            maxRPM = rightData[1];
         }
         
         currentSU = maxSU;
+        currentRPM = maxRPM;
     }
     
     /**
-     * Gets SU (Stress Units) from Create's rotation system.
-     * SU represents the stress capacity/usage of the rotation network.
-     * This checks for rotation sources connected to this block.
+     * Gets SU (Stress Units) and RPM from Create's shaft connection.
+     * Checks for shaft blocks or kinetic block entities that can provide rotation.
+     * Only accepts input from bottom, left, and right sides.
+     * 
+     * @param level The level
+     * @param pos Position of the adjacent block (shaft position)
+     * @param fromDirection Direction from which we're receiving power (opposite of shaft direction)
+     * @return Array with [SU, RPM] values based on speed from the shaft
      */
-    private float getSUFromCreate(Level level, BlockPos pos, Direction direction) {
+    private float[] getSUAndRPMFromShaft(Level level, BlockPos pos, Direction fromDirection) {
+        // Return [SU, RPM]
+        float[] result = getSUAndRPMFromShaftInternal(level, pos, fromDirection);
+        return result;
+    }
+    
+    /**
+     * Legacy method for backward compatibility - delegates to getSUAndRPMFromShaft.
+     * @deprecated Use getSUAndRPMFromShaft instead
+     */
+    @Deprecated
+    private float getSUFromShaft(Level level, BlockPos pos, Direction fromDirection) {
+        return getSUAndRPMFromShaft(level, pos, fromDirection)[0];
+    }
+    
+    /**
+     * Internal method to get SU and RPM from Create's shaft connection.
+     * 
+     * @param level The level
+     * @param pos Position of the adjacent block (shaft position)
+     * @param fromDirection Direction from which we're receiving power (opposite of shaft direction)
+     * @return Array with [SU, RPM] values
+     */
+    private float[] getSUAndRPMFromShaftInternal(Level level, BlockPos pos, Direction fromDirection) {
         if (!ModList.get().isLoaded("create")) {
-            return 0.0f;
+            return new float[]{0.0f, 0.0f}; // [SU, RPM]
         }
         
         try {
-            // Check if the adjacent block is a Create rotation source
-            var blockEntity = level.getBlockEntity(pos);
-            if (blockEntity != null) {
-                // Try to access Create's KineticBlockEntity
-                Class<?> kineticClass = Class.forName("com.simibubi.create.content.kinetics.base.KineticBlockEntity");
-                if (kineticClass.isInstance(blockEntity)) {
-                    // Get stress capacity/usage from the kinetic network
-                    try {
-                        // Try to get stress capacity (total SU available)
-                        var getCapacityMethod = kineticClass.getMethod("getCapacity");
-                        float capacity = ((Number) getCapacityMethod.invoke(blockEntity)).floatValue();
-                        
-                        // Also try to get stress usage (current SU being used)
+            // First check if it's a shaft block
+            var blockState = level.getBlockState(pos);
+            var block = blockState.getBlock();
+            
+            // Check if it's a Create shaft block (only shafts, not cogwheels or other kinetic blocks)
+            String blockName = block.getDescriptionId();
+            if (blockName.contains("shaft")) {
+                // Try to get the block entity (shafts have block entities)
+                var blockEntity = level.getBlockEntity(pos);
+                if (blockEntity != null) {
+                    // Try to access Create's KineticBlockEntity
+                    Class<?> kineticClass = Class.forName("com.simibubi.create.content.kinetics.base.KineticBlockEntity");
+                    if (kineticClass.isInstance(blockEntity)) {
+                        // Get RPM/speed from the shaft
                         try {
-                            var getUsageMethod = kineticClass.getMethod("getUsage");
-                            float usage = ((Number) getUsageMethod.invoke(blockEntity)).floatValue();
+                            // Get rotation speed (RPM) - this is what we want
+                            var getSpeedMethod = kineticClass.getMethod("getSpeed");
+                            float speed = ((Number) getSpeedMethod.invoke(blockEntity)).floatValue();
                             
-                            // Use the higher of capacity or usage as our SU value
-                            float su = Math.max(capacity, usage);
+                            // Convert RPM to SU for our calculations
+                            // Higher RPM = more SU (used for recharge time calculation)
+                            // We use absolute value since speed can be negative (rotation direction)
+                            float rpm = Math.abs(speed);
+                            float su = rpm * 16.0f;
                             if (su > 0.1f) {
-                                RubiusCobblemonAdditions.LOGGER.debug("Found SU from Create: {} (capacity: {}, usage: {}) at {}", su, capacity, usage, pos);
-                                return su;
+                                return new float[]{su, rpm}; // [SU, RPM]
                             }
                         } catch (NoSuchMethodException e) {
-                            // If usage method doesn't exist, just use capacity
-                            if (capacity > 0.1f) {
-                                RubiusCobblemonAdditions.LOGGER.debug("Found SU capacity from Create: {} at {}", capacity, pos);
-                                return capacity;
+                            // Fallback: Try to get stress capacity/usage
+                            try {
+                                var getCapacityMethod = kineticClass.getMethod("getCapacity");
+                                float capacity = ((Number) getCapacityMethod.invoke(blockEntity)).floatValue();
+                                if (capacity > 0.1f) {
+                                    // Estimate RPM from capacity (rough approximation)
+                                    float estimatedRPM = capacity / 16.0f;
+                                    return new float[]{capacity, estimatedRPM}; // [SU, RPM]
+                                }
+                            } catch (NoSuchMethodException e2) {
+                                // No methods available
                             }
-                        }
-                    } catch (NoSuchMethodException e) {
-                        // Fallback: Calculate SU from rotation speed
-                        // Higher speed = more SU (rough approximation)
-                        var speedMethod = kineticClass.getMethod("getSpeed");
-                        float speed = ((Number) speedMethod.invoke(blockEntity)).floatValue();
-                        
-                        // Convert speed to approximate SU
-                        // SU roughly correlates with rotation speed: SU ≈ speed * 16 (rough approximation)
-                        float su = Math.abs(speed) * 16.0f;
-                        if (su > 0.1f) {
-                            RubiusCobblemonAdditions.LOGGER.debug("Calculated SU from speed: {} at {}", su, pos);
-                            return su;
                         }
                     }
                 }
             }
         } catch (ClassNotFoundException e) {
             // Create classes not found - Create might not be loaded
-            RubiusCobblemonAdditions.LOGGER.debug("Create classes not found: {}", e.getMessage());
         } catch (Exception e) {
             // Create not available or API changed - return 0
-            RubiusCobblemonAdditions.LOGGER.debug("Could not get SU from Create: {}", e.getMessage());
         }
         
-        return 0.0f;
+        return new float[]{0.0f, 0.0f}; // [SU, RPM] - no shaft found
     }
     
     /**
@@ -203,7 +337,7 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     /**
      * Calculates the recharge time in seconds based on current SU (Stress Units).
      * Rules:
-     * - At 0 SU: 900 seconds (15 minutes) - default Cobblemon recharge time
+     * - At 0 SU: Matches Cobblemon's default recharge time (attempts to read from Cobblemon, falls back to 300 seconds/5 minutes)
      * - At MIN_SU+ (256 SU): 350 seconds (~5.8 minutes)
      * - At MAX_SU (1024 SU): 0 seconds (instant recharge)
      * - Linear scaling between MIN_SU and MAX_SU
@@ -291,13 +425,13 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             // Check if player is in battle - prevent healing during battle
             if (isPlayerInBattle(player)) {
                 if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                    var message = net.minecraft.network.chat.Component.translatable("cobblemon.healing.machine.in.battle");
+                    var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.in.battle");
                     try {
-                        serverPlayer.sendSystemMessage(message);
+                        serverPlayer.sendSystemMessage(message, true); // Action bar message
                     } catch (Exception e) {
                         // Fallback message if translation key doesn't exist
                         var fallbackMessage = net.minecraft.network.chat.Component.literal("You cannot heal during battle!");
-                        serverPlayer.sendSystemMessage(fallbackMessage);
+                        serverPlayer.sendSystemMessage(fallbackMessage, true); // Action bar message
                     }
                 }
                 return InteractionResult.CONSUME;
@@ -310,17 +444,17 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                     int minutes = remainingSeconds / 60;
                     int seconds = remainingSeconds % 60;
                     var message = net.minecraft.network.chat.Component.translatable(
-                        "cobblemon.healing.machine.recharging", 
+                        "message.rubius_cobblemon_additions.healing_machine.recharging", 
                         minutes, seconds
                     );
                     try {
-                        serverPlayer.sendSystemMessage(message);
+                        serverPlayer.sendSystemMessage(message, true); // Action bar message
                     } catch (Exception e) {
                         // Fallback message if translation key doesn't exist
                         var fallbackMessage = net.minecraft.network.chat.Component.literal(
                             String.format("Healing machine is recharging... %d:%02d remaining", minutes, seconds)
                         );
-                        serverPlayer.sendSystemMessage(fallbackMessage);
+                        serverPlayer.sendSystemMessage(fallbackMessage, true); // Action bar message
                     }
                 }
                 return InteractionResult.CONSUME;
@@ -338,8 +472,8 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                     } else {
                         // Different player trying to use - show message
                         if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                            var message = net.minecraft.network.chat.Component.translatable("cobblemon.healing.machine.in.use");
-                            serverPlayer.sendSystemMessage(message);
+                            var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.in.use");
+                            serverPlayer.sendSystemMessage(message, true); // Action bar message
                         }
                         return InteractionResult.CONSUME;
                     }
@@ -347,8 +481,8 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             } else {
                 // Player has no Pokemon that need healing
                 if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                    var message = net.minecraft.network.chat.Component.translatable("cobblemon.healing.machine.no.heal.needed");
-                    serverPlayer.sendSystemMessage(message);
+                    var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.no.heal.needed");
+                    serverPlayer.sendSystemMessage(message, true); // Action bar message
                 }
                 return InteractionResult.PASS;
             }
@@ -389,7 +523,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                                 // Check if result has getStorage method
                                 try {
                                     result.getClass().getMethod("getStorage");
-                                    RubiusCobblemonAdditions.LOGGER.debug("Found API via INSTANCE.{}()", method.getName());
                                     return result;
                                 } catch (NoSuchMethodException ignored) {}
                             }
@@ -405,7 +538,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                             if (result != null) {
                                 try {
                                     result.getClass().getMethod("getStorage");
-                                    RubiusCobblemonAdditions.LOGGER.debug("Found API via INSTANCE.{}() (declared)", method.getName());
                                     return result;
                                 } catch (NoSuchMethodException ignored) {}
                             }
@@ -422,7 +554,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                         if (result != null) {
                             try {
                                 result.getClass().getMethod("getStorage");
-                                RubiusCobblemonAdditions.LOGGER.debug("Found API via INSTANCE.{} field", field.getName());
                                 return result;
                             } catch (NoSuchMethodException ignored) {}
                         }
@@ -447,7 +578,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                             if (result != null) {
                                 try {
                                     result.getClass().getMethod("getStorage");
-                                    RubiusCobblemonAdditions.LOGGER.debug("Found API via Companion.{}()", method.getName());
                                     return result;
                                 } catch (NoSuchMethodException ignored) {}
                             }
@@ -463,7 +593,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                             if (result != null) {
                                 try {
                                     result.getClass().getMethod("getStorage");
-                                    RubiusCobblemonAdditions.LOGGER.debug("Found API via Companion.{}() (declared)", method.getName());
                                     return result;
                                 } catch (NoSuchMethodException ignored) {}
                             }
@@ -482,7 +611,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                         if (result != null) {
                             try {
                                 result.getClass().getMethod("getStorage");
-                                RubiusCobblemonAdditions.LOGGER.debug("Found API via static {}()", method.getName());
                                 return result;
                             } catch (NoSuchMethodException ignored) {}
                         }
@@ -497,7 +625,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                 if (result != null) {
                     try {
                         result.getClass().getMethod("getStorage");
-                        RubiusCobblemonAdditions.LOGGER.debug("Found API via Cobblemon.api()");
                         return result;
                     } catch (NoSuchMethodException ignored) {}
                 }
@@ -511,7 +638,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                 if (result != null) {
                     try {
                         result.getClass().getMethod("getStorage");
-                        RubiusCobblemonAdditions.LOGGER.debug("Found API via CobblemonAPI.getInstance()");
                         return result;
                     } catch (NoSuchMethodException ignored) {}
                 }
@@ -541,7 +667,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                                     if (result != null) {
                                         try {
                                             result.getClass().getMethod("getStorage");
-                                            RubiusCobblemonAdditions.LOGGER.debug("Found API via {}.{}()", className, method.getName());
                                             return result;
                                         } catch (NoSuchMethodException ignored) {}
                                     }
@@ -557,7 +682,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                                     if (result != null) {
                                         try {
                                             result.getClass().getMethod("getStorage");
-                                            RubiusCobblemonAdditions.LOGGER.debug("Found API via {}.{}() (declared)", className, method.getName());
                                             return result;
                                         } catch (NoSuchMethodException ignored) {}
                                     }
@@ -613,7 +737,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             // Only log unexpected errors once
             String errorKey = "isPlayerInBattle_error";
             if (!REFLECTION_CACHE.containsKey(errorKey)) {
-                RubiusCobblemonAdditions.LOGGER.debug("Error checking if player is in battle: {}", e.getMessage());
                 REFLECTION_CACHE.put(errorKey, true);
             }
         }
@@ -659,7 +782,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                 java.util.List<?> list = (java.util.List<?>) toGappyListMethod.invoke(partyStoreObj);
                 pokemonList = list;
             } catch (Exception e) {
-                RubiusCobblemonAdditions.LOGGER.debug("Could not get pokemon list: {}", e.getMessage());
                 return false;
             }
             
@@ -668,12 +790,48 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             }
             
             // Check if any Pokemon have less than full HP
-            // We'll assume if there are Pokemon, they might need healing
-            // (Cobblemon's healing machine doesn't check HP before allowing healing)
-            return true;
+            for (Object pokemon : pokemonList) {
+                if (pokemon == null) {
+                    continue; // Skip empty slots
+                }
+                
+                try {
+                    // Try getCurrentHealth/getMaxHealth first
+                    int currentHp = 0;
+                    int maxHp = 0;
+                    
+                    try {
+                        var hpMethod = pokemon.getClass().getMethod("getCurrentHealth");
+                        var maxHpMethod = pokemon.getClass().getMethod("getMaxHealth");
+                        currentHp = ((Number) hpMethod.invoke(pokemon)).intValue();
+                        maxHp = ((Number) maxHpMethod.invoke(pokemon)).intValue();
+                    } catch (NoSuchMethodException e) {
+                        // Try alternative method names
+                        try {
+                            var hpMethod = pokemon.getClass().getMethod("getHp");
+                            var maxHpMethod = pokemon.getClass().getMethod("getMaxHp");
+                            currentHp = ((Number) hpMethod.invoke(pokemon)).intValue();
+                            maxHp = ((Number) maxHpMethod.invoke(pokemon)).intValue();
+                        } catch (NoSuchMethodException e2) {
+                            // Can't check HP, skip this Pokemon
+                            continue;
+                        }
+                    }
+                    
+                    // If this Pokemon has less than full HP, healing is needed
+                    if (currentHp < maxHp) {
+                        return true;
+                    }
+                } catch (Exception e) {
+                    // Error checking this Pokemon, skip it
+                    continue;
+                }
+            }
+            
+            // All Pokemon are at full health, no healing needed
+            return false;
             
         } catch (Exception e) {
-            RubiusCobblemonAdditions.LOGGER.debug("Error checking if player can heal Pokemon: {}", e.getMessage());
         }
         
         return false;
@@ -684,11 +842,18 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
      * Uses the same animation/behavior as Cobblemon's healing machine.
      */
     private void startHealing(Player player) {
-        if (level != null) {
+        if (level != null && !level.isClientSide) {
             isHealing = true;
             healingStartTime = level.getGameTime();
             healingPlayer = player;
             healingPlayerUUID = player.getUUID();
+            
+            // Get pokeball ResourceLocation names from party on server side (matches Cobblemon's approach)
+            if (player instanceof ServerPlayer serverPlayer) {
+                healingPokeballNames = getPokeballNamesFromParty(serverPlayer);
+            } else {
+                healingPokeballNames.clear();
+            }
             
             // Update block state to show healing animation
             updateHealingState(true);
@@ -696,7 +861,20 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             // Sync to client immediately so renderer can show pokeballs
             setChanged();
             if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                // Force sync block entity data to client
                 serverLevel.getChunkSource().blockChanged(worldPosition);
+                // Send block entity update packet directly to all nearby players
+                var packet = getUpdatePacket();
+                if (packet != null) {
+                    var players = serverLevel.getEntitiesOfClass(
+                        net.minecraft.server.level.ServerPlayer.class,
+                        new net.minecraft.world.phys.AABB(worldPosition).inflate(64.0),
+                        p -> true
+                    );
+                    for (var nearbyPlayer : players) {
+                        nearbyPlayer.connection.send(packet);
+                    }
+                }
             }
             
             // Play healing start sound (try Cobblemon's sound first, fallback to note block)
@@ -705,33 +883,206 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             // Send healing started message (same as normal healing machine)
             if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
                 try {
-                    var message = net.minecraft.network.chat.Component.translatable("cobblemon.healing.machine.start");
-                    serverPlayer.sendSystemMessage(message);
+                    var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.start");
+                    serverPlayer.sendSystemMessage(message, true); // Action bar message
                 } catch (Exception e) {
                     // Fallback message if translation key doesn't exist
                     var message = net.minecraft.network.chat.Component.literal("Healing started...");
-                    serverPlayer.sendSystemMessage(message);
+                    serverPlayer.sendSystemMessage(message, true); // Action bar message
                 }
             }
             
-            RubiusCobblemonAdditions.LOGGER.info("Healing started for player: {} at {}", player.getName().getString(), worldPosition);
         }
     }
     
     /**
-     * Updates the block state to reflect healing status (for animations).
+     * Gets pokeball ResourceLocation names from the player's party (server-side only).
+     * Matches Cobblemon's approach: stores PokeBall.name (ResourceLocation) instead of ItemStacks.
+     * This is synced to the client for rendering.
+     */
+    private java.util.Map<Integer, net.minecraft.resources.ResourceLocation> getPokeballNamesFromParty(ServerPlayer serverPlayer) {
+        java.util.Map<Integer, net.minecraft.resources.ResourceLocation> pokeballMap = new java.util.HashMap<>();
+        
+        if (!ModList.get().isLoaded("cobblemon")) {
+            return pokeballMap;
+        }
+        
+        try {
+            // Use direct API access
+            Cobblemon cobblemon = Cobblemon.INSTANCE;
+            if (cobblemon == null) {
+                return pokeballMap;
+            }
+            
+            PokemonStoreManager storageManager = cobblemon.getStorage();
+            if (storageManager == null) {
+                return pokeballMap;
+            }
+            
+            // Get party store - use Object to avoid Kotlin interop issues
+            Object partyStoreObj = storageManager.getParty(serverPlayer);
+            if (partyStoreObj == null) {
+                return pokeballMap;
+            }
+            
+            // Get pokemon list using reflection (toGappyList() is a Kotlin method)
+            java.util.List<?> pokemonList = null;
+            try {
+                var toGappyListMethod = partyStoreObj.getClass().getMethod("toGappyList");
+                @SuppressWarnings("unchecked")
+                java.util.List<?> list = (java.util.List<?>) toGappyListMethod.invoke(partyStoreObj);
+                pokemonList = list;
+            } catch (Exception e) {
+                return pokeballMap;
+            }
+            
+            if (pokemonList == null || pokemonList.isEmpty()) {
+                return pokeballMap;
+            }
+            
+            // Convert pokemon to pokeball ResourceLocation names (matches Cobblemon's approach)
+            for (int index = 0; index < pokemonList.size(); index++) {
+                Object pokemon = pokemonList.get(index);
+                if (pokemon == null) {
+                    continue;
+                }
+                
+                // Get the pokeball ResourceLocation name (matches Cobblemon's pokemon.caughtBall.name)
+                net.minecraft.resources.ResourceLocation pokeballName = getPokeballNameFromPokemon(pokemon);
+                if (pokeballName != null) {
+                    pokeballMap.put(index, pokeballName);
+                }
+            }
+            
+        } catch (Exception e) {
+        }
+        
+        return pokeballMap;
+    }
+    
+    /**
+     * Gets a pokeball ResourceLocation name from a Pokemon object (server-side).
+     * Matches Cobblemon's approach: pokemon.caughtBall.name
+     */
+    private net.minecraft.resources.ResourceLocation getPokeballNameFromPokemon(Object pokemon) {
+        try {
+            // Try to get the caught ball (matches Cobblemon's pokemon.caughtBall)
+            var getCaughtBallMethod = pokemon.getClass().getMethod("getCaughtBall");
+            Object pokeBall = getCaughtBallMethod.invoke(pokemon);
+            
+            if (pokeBall != null) {
+                // Get the name property (matches Cobblemon's pokeBall.name)
+                try {
+                    var getNameMethod = pokeBall.getClass().getMethod("getName");
+                    Object name = getNameMethod.invoke(pokeBall);
+                    if (name instanceof net.minecraft.resources.ResourceLocation resourceLocation) {
+                        return resourceLocation;
+                    } else if (name != null) {
+                        // Try to convert to ResourceLocation
+                        return net.minecraft.resources.ResourceLocation.parse(name.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                }
+            }
+        } catch (Exception e) {
+        }
+        
+        // Fallback: default pokeball
+        return net.minecraft.resources.ResourceLocation.parse("cobblemon:poke_ball");
+    }
+    
+    /**
+     * Gets a pokeball ItemStack for a Pokemon object (server-side).
+     * Uses Cobblemon's PokeBall.stack() method, matching their exact approach.
+     */
+    private net.minecraft.world.item.ItemStack getPokeballForPokemon(Object pokemon) {
+        try {
+            // Try to get the caught ball (matches Cobblemon's pokemon.caughtBall)
+            var getCaughtBallMethod = pokemon.getClass().getMethod("getCaughtBall");
+            Object pokeBall = getCaughtBallMethod.invoke(pokemon);
+            
+            if (pokeBall != null) {
+                // Use Cobblemon's PokeBall.stack() method (matches their exact approach)
+                try {
+                    var stackMethod = pokeBall.getClass().getMethod("stack", int.class);
+                    net.minecraft.world.item.ItemStack stack = (net.minecraft.world.item.ItemStack) stackMethod.invoke(pokeBall, 1);
+                    if (stack != null && !stack.isEmpty()) {
+                        return stack;
+                    }
+                } catch (NoSuchMethodException e) {
+                    // Try without parameter (default count = 1)
+                    try {
+                        var stackMethod = pokeBall.getClass().getMethod("stack");
+                        net.minecraft.world.item.ItemStack stack = (net.minecraft.world.item.ItemStack) stackMethod.invoke(pokeBall);
+                        if (stack != null && !stack.isEmpty()) {
+                            return stack;
+                        }
+                    } catch (NoSuchMethodException e2) {
+                        // Fallback to old method names
+                        try {
+                            var getItemStackMethod = pokeBall.getClass().getMethod("getItemStack");
+                            net.minecraft.world.item.ItemStack stack = (net.minecraft.world.item.ItemStack) getItemStackMethod.invoke(pokeBall);
+                            if (stack != null && !stack.isEmpty()) {
+                                return stack;
+                            }
+                        } catch (NoSuchMethodException ignored) {}
+                    }
+                }
+            }
+        } catch (Exception e) {
+        }
+        
+        // Fallback: Get default pokeball item
+        try {
+            var pokeballItem = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+                net.minecraft.resources.ResourceLocation.parse("cobblemon:poke_ball"));
+            if (pokeballItem != null) {
+                return new net.minecraft.world.item.ItemStack(pokeballItem);
+            }
+        } catch (Exception e) {
+        }
+        
+        return net.minecraft.world.item.ItemStack.EMPTY;
+    }
+    
+    /**
+     * Updates the block state to reflect healing status and power state (for animations and colors).
      */
     private void updateHealingState(boolean healing) {
+        updateBlockState(healing);
+    }
+    
+    /**
+     * Updates the block state based on healing status and power state.
+     * Power state: 0 = unpowered (red), 1 = powered (yellow)
+     * Healing overrides power state visually.
+     */
+    private void updateBlockState(boolean healing) {
         if (level != null && !level.isClientSide) {
             BlockState currentState = getBlockState();
+            BlockState newState = currentState;
+            
+            // Update healing state
             if (currentState.hasProperty(nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock.HEALING)) {
-                BlockState newState = currentState.setValue(
+                newState = newState.setValue(
                     nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock.HEALING, 
                     healing
                 );
+            }
+            
+            // Update power state: 0 = unpowered (red), 1 = powered (yellow)
+            if (currentState.hasProperty(nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock.POWER_STATE)) {
+                int powerState = (currentSU > 0.1f) ? 1 : 0; // 1 = powered (yellow), 0 = unpowered (red)
+                newState = newState.setValue(
+                    nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock.POWER_STATE,
+                    powerState
+                );
+            }
+            
+            if (newState != currentState) {
                 level.setBlock(worldPosition, newState, 3);
                 setChanged();
-                // Sync to client so pokeball rendering works
+                // Sync to client so pokeball rendering and colors work
                 level.sendBlockUpdated(worldPosition, currentState, newState, 3);
             }
         }
@@ -760,14 +1111,14 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
         healingStartTime = 0;
         healingPlayer = null;
         healingPlayerUUID = null;
+        healingPokeballNames.clear(); // Clear pokeballs when done
         
-        // Update block state to stop healing animation
-        updateHealingState(false);
+        // Update block state to stop healing animation and update power state
+        updateBlockState(false);
         
         setChanged();
         
         int rechargeTime = calculateRechargeTime();
-        RubiusCobblemonAdditions.LOGGER.info("Healing complete at SU: {} (recharge time: {} seconds)", currentSU, rechargeTime);
     }
     
     /**
@@ -820,7 +1171,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                 return;
             }
             
-            RubiusCobblemonAdditions.LOGGER.info("Successfully healed all Pokemon for player: {}", serverPlayer.getName().getString());
             
             // Play healing complete sound
             playHealingSound(false);
@@ -843,7 +1193,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                 try {
                     var healMethod = pokemon.getClass().getMethod(methodName);
                     healMethod.invoke(pokemon);
-                    RubiusCobblemonAdditions.LOGGER.debug("Healed Pokemon using {}.{}()", pokemon.getClass().getSimpleName(), methodName);
                     return;
                 } catch (NoSuchMethodException ignored) {}
             }
@@ -854,7 +1203,6 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                 var maxHpMethod = pokemon.getClass().getMethod("getMaxHealth");
                 var maxHp = ((Number) maxHpMethod.invoke(pokemon)).floatValue();
                 setHpMethod.invoke(pokemon, maxHp);
-                RubiusCobblemonAdditions.LOGGER.debug("Healed Pokemon by setting HP to max");
             } catch (NoSuchMethodException e) {
                 RubiusCobblemonAdditions.LOGGER.warn("Could not find heal method for Pokemon: {}", e.getMessage());
             }
@@ -868,12 +1216,12 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
      */
     private void sendHealingCompleteMessage(net.minecraft.server.level.ServerPlayer serverPlayer) {
         try {
-            var messageComponent = net.minecraft.network.chat.Component.translatable("cobblemon.healing.machine.complete");
-            serverPlayer.sendSystemMessage(messageComponent);
+            var messageComponent = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.complete");
+            serverPlayer.sendSystemMessage(messageComponent, true); // Action bar message
         } catch (Exception e) {
             // Translation key might not exist, use fallback
             var messageComponent = net.minecraft.network.chat.Component.literal("Your Pokemon have been healed!");
-            serverPlayer.sendSystemMessage(messageComponent);
+            serverPlayer.sendSystemMessage(messageComponent, true); // Action bar message
         }
     }
     
@@ -888,39 +1236,21 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             return;
         }
         
-        try {
-            // Try to use Cobblemon's healing machine sounds
-            ResourceLocation soundLocation;
-            if (start) {
-                soundLocation = ResourceLocation.parse("cobblemon:healing_machine_start");
-            } else {
-                soundLocation = ResourceLocation.parse("cobblemon:healing_machine_complete");
-            }
-            
-            // Try to get the sound event from registry
-            var soundEvent = net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(soundLocation);
-            if (soundEvent != null) {
-                level.playSound(null, worldPosition, soundEvent, SoundSource.BLOCKS, 1.0f, 1.0f);
-                return;
-            }
-        } catch (Exception e) {
-            // Cobblemon sound not found, use fallback
-        }
-        
-        // Fallback: Use Minecraft sounds
-        // Start: Note block pling (pleasant sound)
-        // Complete: Bell sound (success sound)
         if (start) {
-            var startSound = net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(ResourceLocation.parse("minecraft:block.note_block.pling"));
-            if (startSound != null) {
-                level.playSound(null, worldPosition, startSound, SoundSource.BLOCKS, 0.7f, 1.2f);
-            }
-        } else {
-            var completeSound = net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(ResourceLocation.parse("minecraft:block.bell.use"));
-            if (completeSound != null) {
-                level.playSound(null, worldPosition, completeSound, SoundSource.BLOCKS, 0.8f, 1.5f);
+            // Use Cobblemon's exact sound (matches their activate() method)
+            // CobblemonSounds.HEALING_MACHINE_ACTIVE = "block.healing_machine.active"
+            try {
+                var soundEvent = net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(
+                    ResourceLocation.parse("cobblemon:block.healing_machine.active")
+                );
+                if (soundEvent != null) {
+                    level.playSound(null, worldPosition, soundEvent, SoundSource.BLOCKS, 1.0f, 1.0f);
+                    return;
+                }
+            } catch (Exception e) {
             }
         }
+        // No sound for completion (Cobblemon doesn't play a sound on completion)
     }
     
     /**
@@ -928,6 +1258,14 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
      */
     public float getCurrentSU() {
         return currentSU;
+    }
+    
+    /**
+     * Gets the current RPM (rotation speed) from Create's rotation system.
+     * Used for Create goggles display.
+     */
+    public float getCurrentRPM() {
+        return currentRPM;
     }
     
     /**
@@ -952,6 +1290,14 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
         return healingPlayerUUID;
     }
     
+    /**
+     * Gets the pokeball ResourceLocation names for rendering (synced from server).
+     * Matches Cobblemon's approach: returns Map<Int, ResourceLocation>.
+     */
+    public java.util.Map<Integer, net.minecraft.resources.ResourceLocation> getHealingPokeballNames() {
+        return healingPokeballNames != null ? healingPokeballNames : new java.util.HashMap<>();
+    }
+    
     @Override
     public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
@@ -973,11 +1319,25 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     protected void saveAdditional(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putFloat("CurrentSU", currentSU);
+        tag.putFloat("CurrentRPM", currentRPM);
         tag.putBoolean("IsHealing", isHealing);
         tag.putLong("HealingStartTime", healingStartTime);
         tag.putLong("RechargeStartTime", rechargeStartTime);
         if (healingPlayerUUID != null) {
             tag.putUUID("HealingPlayerUUID", healingPlayerUUID);
+        }
+        
+        // Save pokeball ResourceLocation names (matches Cobblemon's approach)
+        if (healingPokeballNames != null && !healingPokeballNames.isEmpty()) {
+            var pokeballsTag = new net.minecraft.nbt.CompoundTag();
+            for (var entry : healingPokeballNames.entrySet()) {
+                pokeballsTag.putString(entry.getKey().toString(), entry.getValue().toString());
+            }
+            tag.put("HealingPokeballNames", pokeballsTag);
+            if (level != null && !level.isClientSide) {
+            }
+        } else {
+            tag.remove("HealingPokeballNames");
         }
     }
     
@@ -985,6 +1345,7 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     public void loadAdditional(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         currentSU = tag.getFloat("CurrentSU");
+        currentRPM = tag.contains("CurrentRPM") ? tag.getFloat("CurrentRPM") : 0.0f;
         isHealing = tag.getBoolean("IsHealing");
         healingStartTime = tag.getLong("HealingStartTime");
         rechargeStartTime = tag.getLong("RechargeStartTime");
@@ -998,9 +1359,74 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             }
         }
         
-        // Update block state to match healing status
-        if (level != null && !level.isClientSide) {
-            updateHealingState(isHealing);
+        // Load pokeball ResourceLocation names (matches Cobblemon's approach)
+        healingPokeballNames.clear();
+        if (tag.contains("HealingPokeballNames", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            var pokeballsTag = tag.getCompound("HealingPokeballNames");
+            for (String key : pokeballsTag.getAllKeys()) {
+                try {
+                    int index = Integer.parseInt(key);
+                    String pokeballId = pokeballsTag.getString(key);
+                    if (!pokeballId.isEmpty()) {
+                        var resourceLocation = net.minecraft.resources.ResourceLocation.parse(pokeballId);
+                        healingPokeballNames.put(index, resourceLocation);
+                    }
+                } catch (Exception e) {
+                }
+            }
+            if (level != null && level.isClientSide) {
+            }
+        } else {
+            if (level != null && level.isClientSide) {
+            }
         }
+        
+        // Update block state to match healing status and power state
+        if (level != null && !level.isClientSide) {
+            updateBlockState(isHealing);
+        }
+    }
+    
+    /**
+     * Provides information for Create's goggles display system.
+     * This method is called by Create's goggles when a player looks at this block entity.
+     * Returns true if information was added, false otherwise.
+     * 
+     * @param player The player wearing goggles
+     * @param tooltip List to add tooltip lines to
+     * @return true if information was added
+     */
+    public boolean addToGoggleTooltip(Player player, java.util.List<net.minecraft.network.chat.Component> tooltip) {
+        if (!ModList.get().isLoaded("create")) {
+            return false;
+        }
+        
+        // Add RPM information
+        if (currentRPM > 0.1f) {
+            tooltip.add(net.minecraft.network.chat.Component.translatable("create.goggles.kinetic_speed")
+                .append(": " + String.format("%.1f", currentRPM) + " RPM"));
+        } else {
+            tooltip.add(net.minecraft.network.chat.Component.translatable("create.goggles.kinetic_speed")
+                .append(": " + net.minecraft.network.chat.Component.translatable("create.goggles.not_powered")));
+        }
+        
+        // Add SU (Stress Units) information
+        if (currentSU > 0.1f) {
+            tooltip.add(net.minecraft.network.chat.Component.literal("Stress Units: " + String.format("%.1f", currentSU)));
+        }
+        
+        // Add healing status
+        if (isHealing) {
+            tooltip.add(net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.start"));
+        } else if (rechargeStartTime > 0 && level != null) {
+            int remainingSeconds = getRemainingRechargeTime(level);
+            if (remainingSeconds > 0) {
+                int minutes = remainingSeconds / 60;
+                int seconds = remainingSeconds % 60;
+                tooltip.add(net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.recharging", minutes, seconds));
+            }
+        }
+        
+        return true;
     }
 }

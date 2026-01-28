@@ -68,10 +68,6 @@ public class RubiusCobblemonAdditions {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         // Log that blocks and items are registered
-        LOGGER.info("Rubius Cobblemon Additions: Blocks registered");
-        LOGGER.info("Create-powered healing machine block: {}", ModBlocks.CREATE_POWERED_HEALING_MACHINE.getId());
-        LOGGER.info("Create-powered healing machine item: {}", ModItems.CREATE_POWERED_HEALING_MACHINE.getId());
-        LOGGER.info("Block item check: {}", ModBlocks.CREATE_POWERED_HEALING_MACHINE.get().asItem());
     }
 
     // Creative tab items are now handled in ModCreativeTabs.displayItems()

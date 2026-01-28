@@ -1,17 +1,19 @@
 {
+    "parent": "rubius_cobblemon_additions:block/create_powered_healing_machine_0",
     "textures": {
         "all": "cobblemon:block/functional/healing_machine",
+        "active": "cobblemon:block/functional/healing_machine_active",
         "tray": "cobblemon:block/functional/healing_machine_tray",
         "particle": "cobblemon:block/functional/healing_machine_particle"
     },
-    "elements": [ 
+    "elements": [
         {
             "from": [ 0, 0, 0 ],
             "to": [ 16, 10, 16 ],
             "faces": {
-                "north": { "uv": [ 4, 13.5, 8, 16 ], "texture": "#all" },
+                "north": { "uv": [ 4, 13.5, 8, 16 ], "texture": "#all", "tintindex": 1 },
                 "east": { "uv": [ 0, 11, 4, 13.5 ], "texture": "#all" },
-                "south": { "uv": [ 4, 11, 8, 13.5 ], "texture": "#all" },
+                "south": { "uv": [ 4, 11, 8, 13.5 ], "texture": "#all", "tintindex": 1 },
                 "west": { "uv": [ 0, 13.5, 4, 16 ], "texture": "#all" },
                 "up": { "uv": [ 8, 12, 12, 16 ], "texture": "#all" },
                 "down": { "uv": [ 12, 12, 16, 16 ], "texture": "#all" }
@@ -73,7 +75,7 @@
                 "east": { "uv": [ 12.25, 4.5, 16, 4.75 ], "texture": "#all" },
                 "south": { "uv": [ 13, 5, 16, 5.25 ], "texture": "#all" },
                 "west": { "uv": [ 12.25, 4.75, 16, 5 ], "texture": "#all" },
-                "up": { "uv": [ 2, 0, 14, 15 ], "texture": "#tray" },
+                "up": { "uv": [ 7, 5.25, 10, 9 ], "texture": "#all" },
                 "down": { "uv": [ 13, 5.25, 16, 9 ], "texture": "#all" }
             }
         },
@@ -91,39 +93,5 @@
                 "north": { "uv": [ 0, 1.25, 2.5, 1.5 ], "texture": "#all", "tintindex": 1 }
             }
         }
-    ],
-    "gui_light": "side",
-    "display": {
-        "gui": {
-            "rotation": [ 30, 225, 0 ],
-            "translation": [ 0, 0, 0 ],
-            "scale":[ 0.625, 0.625, 0.625 ]
-        },
-        "ground": {
-            "rotation": [ 0, 0, 0 ],
-            "translation": [ 0, 3, 0 ],
-            "scale":[ 0.25, 0.25, 0.25 ]
-        },
-        "fixed": {
-            "rotation": [ 0, 0, 0 ],
-            "translation": [ 0, 0, 0 ],
-            "scale":[ 0.5, 0.5, 0.5 ]
-        },
-        "thirdperson_righthand": {
-            "rotation": [ 75, 135, 0 ],
-            "translation": [ 0, 2.5, 0 ],
-            "scale": [ 0.375, 0.375, 0.375 ]
-        },
-        "firstperson_righthand": {
-            "rotation": [ 0, 135, 0 ],
-            "translation": [ 0, 0, 0 ],
-            "scale": [ 0.40, 0.40, 0.40 ]
-        },
-        "firstperson_lefthand": {
-            "rotation": [ 0, 135, 0 ],
-            "translation": [ 0, 0, 0 ],
-            "scale": [ 0.40, 0.40, 0.40 ]
-        }
-    }
+    ]
 }
-e

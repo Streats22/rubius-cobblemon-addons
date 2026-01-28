@@ -42,7 +42,6 @@ public class ModCreativeTabs {
                         ItemStack stack = new ItemStack(item);
                         if (!stack.isEmpty() && stack.getItem() != net.minecraft.world.item.Items.AIR) {
                             output.accept(stack);
-                            RubiusCobblemonAdditions.LOGGER.info("Added item to creative tab: {}", stack);
                         } else {
                             RubiusCobblemonAdditions.LOGGER.warn("Item stack is empty or air");
                         }

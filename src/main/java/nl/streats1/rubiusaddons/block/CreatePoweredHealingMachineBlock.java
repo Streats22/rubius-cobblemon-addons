@@ -3,6 +3,7 @@ package nl.streats1.rubiusaddons.block;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -15,6 +16,10 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 import nl.streats1.rubiusaddons.block.entity.CreatePoweredHealingMachineBlockEntity;
 import nl.streats1.rubiusaddons.block.entity.ModBlockEntities;
@@ -24,17 +29,40 @@ public class CreatePoweredHealingMachineBlock extends Block implements EntityBlo
     
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty HEALING = BlockStateProperties.POWERED; // Reuse POWERED property for healing state (animations)
+    // Power state: 0 = UNPOWERED (red), 1 = POWERED (yellow), 2 = HEALING (active - handled by HEALING property)
+    public static final IntegerProperty POWER_STATE = BlockStateProperties.LEVEL; // Reuse LEVEL property (0-15, we use 0-1)
+    
+    // Custom VoxelShapes matching Cobblemon's HealingMachineBlock to prevent clipping
+    // These define the collision/rendering boundaries
+    private static final VoxelShape NORTH_SOUTH_SHAPE = Shapes.or(
+        Shapes.box(0.0, 0.0, 0.0, 1.0, 0.625, 1.0),           // Base
+        Shapes.box(0.0625, 0.625, 0.0, 0.9375, 0.875, 0.125),  // Front edge
+        Shapes.box(0.0625, 0.625, 0.875, 0.9375, 0.875, 1.0),  // Back edge
+        Shapes.box(0.0625, 0.625, 0.125, 0.1875, 0.75, 0.875), // Left side
+        Shapes.box(0.8125, 0.625, 0.125, 0.9375, 0.75, 0.875), // Right side
+        Shapes.box(0.1875, 0.625, 0.125, 0.8125, 0.6875, 0.875) // Top tray
+    );
+    
+    private static final VoxelShape WEST_EAST_SHAPE = Shapes.or(
+        Shapes.box(0.0, 0.0, 0.0, 1.0, 0.625, 1.0),           // Base
+        Shapes.box(0.875, 0.625, 0.0625, 1.0, 0.875, 0.9375), // Front edge
+        Shapes.box(0.0, 0.625, 0.0625, 0.125, 0.875, 0.9375),  // Back edge
+        Shapes.box(0.125, 0.625, 0.0625, 0.875, 0.75, 0.1875), // Left side
+        Shapes.box(0.125, 0.625, 0.8125, 0.875, 0.75, 0.9375), // Right side
+        Shapes.box(0.125, 0.625, 0.1875, 0.875, 0.6875, 0.8125) // Top tray
+    );
     
     public CreatePoweredHealingMachineBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
             .setValue(FACING, Direction.NORTH)
-            .setValue(HEALING, false));
+            .setValue(HEALING, false)
+            .setValue(POWER_STATE, 0)); // 0 = unpowered (red)
     }
     
     @Override
     protected void createBlockStateDefinition(@NotNull StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, HEALING);
+        builder.add(FACING, HEALING, POWER_STATE);
     }
     
     @Override
@@ -45,6 +73,19 @@ public class CreatePoweredHealingMachineBlock extends Block implements EntityBlo
     @Override
     public @NotNull BlockState rotate(@NotNull BlockState state, @NotNull Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+    
+    /**
+     * Returns the VoxelShape for rendering and collision.
+     * Matches Cobblemon's HealingMachineBlock to prevent clipping issues.
+     */
+    @Override
+    public @NotNull VoxelShape getShape(@NotNull BlockState state, @NotNull BlockGetter level, @NotNull BlockPos pos, @NotNull CollisionContext context) {
+        Direction facing = state.getValue(FACING);
+        return switch (facing) {
+            case WEST, EAST -> WEST_EAST_SHAPE;
+            default -> NORTH_SOUTH_SHAPE; // NORTH, SOUTH, UP, DOWN
+        };
     }
 
     @Override

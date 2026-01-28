@@ -1,32 +1,62 @@
 {
   "variants": {
-    "facing=north,powered=false": {
+    "facing=north,powered=false,level=0": {
       "model": "rubius_cobblemon_additions:block/create_powered_healing_machine"
     },
-    "facing=north,powered=true": {
+    "facing=north,powered=false,level=1": {
+      "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_powered"
+    },
+    "facing=north,powered=true,level=0": {
       "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_active"
     },
-    "facing=south,powered=false": {
+    "facing=north,powered=true,level=1": {
+      "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_active"
+    },
+    "facing=south,powered=false,level=0": {
       "model": "rubius_cobblemon_additions:block/create_powered_healing_machine",
       "y": 180
     },
-    "facing=south,powered=true": {
+    "facing=south,powered=false,level=1": {
+      "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_powered",
+      "y": 180
+    },
+    "facing=south,powered=true,level=0": {
       "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_active",
       "y": 180
     },
-    "facing=east,powered=false": {
+    "facing=south,powered=true,level=1": {
+      "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_active",
+      "y": 180
+    },
+    "facing=east,powered=false,level=0": {
       "model": "rubius_cobblemon_additions:block/create_powered_healing_machine",
       "y": 90
     },
-    "facing=east,powered=true": {
+    "facing=east,powered=false,level=1": {
+      "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_powered",
+      "y": 90
+    },
+    "facing=east,powered=true,level=0": {
       "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_active",
       "y": 90
     },
-    "facing=west,powered=false": {
+    "facing=east,powered=true,level=1": {
+      "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_active",
+      "y": 90
+    },
+    "facing=west,powered=false,level=0": {
       "model": "rubius_cobblemon_additions:block/create_powered_healing_machine",
       "y": 270
     },
-    "facing=west,powered=true": {
+    "facing=west,powered=false,level=1": {
+      "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_powered",
+      "y": 270
+    },
+    "facing=west,powered=true,level=0": {
+      "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_active",
+      "y": 270
+    },
+    "facing=west,powered=true,level=1": {
       "model": "rubius_cobblemon_additions:block/create_powered_healing_machine_active",
       "y": 270
     }
