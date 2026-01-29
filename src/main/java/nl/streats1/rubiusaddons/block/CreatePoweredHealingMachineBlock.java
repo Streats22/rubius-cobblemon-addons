@@ -28,9 +28,9 @@ import org.jetbrains.annotations.NotNull;
 public class CreatePoweredHealingMachineBlock extends Block implements EntityBlock {
     
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
-    public static final BooleanProperty HEALING = BlockStateProperties.POWERED; // Reuse POWERED property for healing state (animations)
-    // Power state: 0 = UNPOWERED (red), 1 = POWERED (yellow), 2 = HEALING (active - handled by HEALING property)
-    public static final IntegerProperty POWER_STATE = BlockStateProperties.LEVEL; // Reuse LEVEL property (0-15, we use 0-1)
+    public static final BooleanProperty HEALING = BlockStateProperties.POWERED; // Reuse POWERED property for healing state (active model)
+    // Power state from RPM: 0 = RPM < 12 (blue), 1 = 12–32 RPM (yellow), 2 = 32+ RPM (red). Light: 5/5/12.
+    public static final IntegerProperty POWER_STATE = BlockStateProperties.LEVEL; // Reuse LEVEL property (0, 1, 2)
     
     // Custom VoxelShapes matching Cobblemon's HealingMachineBlock to prevent clipping
     // These define the collision/rendering boundaries
@@ -57,7 +57,7 @@ public class CreatePoweredHealingMachineBlock extends Block implements EntityBlo
         this.registerDefaultState(this.stateDefinition.any()
             .setValue(FACING, Direction.NORTH)
             .setValue(HEALING, false)
-            .setValue(POWER_STATE, 0)); // 0 = unpowered (red)
+            .setValue(POWER_STATE, 0)); // 0 = no power (blue, like normal Cobblemon)
     }
     
     @Override

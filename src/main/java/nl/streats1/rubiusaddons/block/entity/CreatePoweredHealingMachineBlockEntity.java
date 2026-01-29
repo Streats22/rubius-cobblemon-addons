@@ -35,15 +35,56 @@ import java.util.Map;
 
     /**
      * Block entity for the Create-powered healing machine.
-     * Integrates Create's shaft rotation system with Cobblemon's healing machine functionality.
-     * Accepts RPM input from bottom, left, and right sides via shaft connections.
+     * Integrates Create's rotation system with Cobblemon's healing machine functionality.
+     * Accepts RPM from bottom, left, and right via any Create kinetic block (shafts, belts, gearboxes, etc.), but not cogs.
+     *
+     * Implements Create's IHaveGoggleInformation interface via reflection to support goggles display.
      */
 public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
+    
+    // Cache for Create's IHaveGoggleInformation interface check
+    private static Class<?> goggleInterface = null;
+    private static boolean goggleInterfaceChecked = false;
+    
+    /**
+     * Checks if Create's IHaveGoggleInformation interface is available and caches it.
+     */
+    private static Class<?> getGoggleInterface() {
+        if (goggleInterfaceChecked) {
+            return goggleInterface;
+        }
+        goggleInterfaceChecked = true;
+        
+        if (!ModList.get().isLoaded("create")) {
+            return null;
+        }
+        
+        try {
+            goggleInterface = Class.forName("com.simibubi.create.content.contraptions.goggles.IHaveGoggleInformation");
+        } catch (ClassNotFoundException e) {
+            // Interface not found - Create might be different version
+            goggleInterface = null;
+        }
+        
+        return goggleInterface;
+    }
+    
+    /**
+     * Checks if this block entity should be treated as implementing Create's goggles interface.
+     * This allows Create's goggles system to detect and use our block entity.
+     */
+    public boolean isInstanceOfGoggleInterface() {
+        return getGoggleInterface() != null;
+    }
     
     // SU (Stress Units) thresholds for recharge time reduction
     // SU represents the stress capacity/usage of the Create rotation network
     private static final int MIN_SU_FOR_BOOST = 256; // Minimum SU to start reducing recharge time
     private static final int MAX_SU_FOR_INSTANT = 1024; // SU for instant recharge
+
+    // RPM thresholds for light/power state (0 = blue, 1 = yellow, 2 = red)
+    private static final float RPM_THRESHOLD_MEDIUM = 12.0f;  // >= 12 RPM = medium (yellow)
+    private static final float RPM_THRESHOLD_FULL = 32.0f;   // >= 32 RPM = full (red)
     
     // Recharge time constants (in seconds)
     // Try to get the actual recharge time from Cobblemon's healing machine
@@ -165,9 +206,8 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     
     
     /**
-     * Updates the current SU (Stress Units) by checking Create's rotation system.
-     * SU represents the stress capacity/usage of the rotation network.
-     * Only checks for shaft connections from bottom, left, and right sides.
+     * Updates the current SU and RPM by checking Create's rotation system.
+     * Only checks bottom, left, and right for kinetic blocks (shafts, belts, gearboxes, etc.; no cogs).
      * Left and right are relative to the block's facing direction.
      */
     private void updateSU(Level level, BlockPos pos) {
@@ -187,7 +227,7 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
         Direction left = facing.getCounterClockWise();  // Left side relative to facing
         Direction right = facing.getClockWise();       // Right side relative to facing
         
-        // Check for shaft connections from bottom, left, and right only
+        // Check for Create kinetic connections from bottom, left, and right only (no cogs)
         float maxSU = 0.0f;
         float maxRPM = 0.0f;
         
@@ -220,14 +260,14 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     }
     
     /**
-     * Gets SU (Stress Units) and RPM from Create's shaft connection.
-     * Checks for shaft blocks or kinetic block entities that can provide rotation.
-     * Only accepts input from bottom, left, and right sides.
+     * Gets SU (Stress Units) and RPM from an adjacent Create kinetic block.
+     * Accepts any kinetic block (shafts, belts, gearboxes, etc.) except cogs.
+     * Only checks bottom, left, and right sides.
      * 
      * @param level The level
-     * @param pos Position of the adjacent block (shaft position)
-     * @param fromDirection Direction from which we're receiving power (opposite of shaft direction)
-     * @return Array with [SU, RPM] values based on speed from the shaft
+     * @param pos Position of the adjacent block
+     * @param fromDirection Direction from which we're receiving power
+     * @return Array with [SU, RPM] values
      */
     private float[] getSUAndRPMFromShaft(Level level, BlockPos pos, Direction fromDirection) {
         // Return [SU, RPM]
@@ -245,11 +285,12 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     }
     
     /**
-     * Internal method to get SU and RPM from Create's shaft connection.
-     * 
+     * Internal method to get SU and RPM from an adjacent Create kinetic block.
+     * Accepts any KineticBlockEntity (shafts, belts, gearboxes, etc.) except cogs.
+     *
      * @param level The level
-     * @param pos Position of the adjacent block (shaft position)
-     * @param fromDirection Direction from which we're receiving power (opposite of shaft direction)
+     * @param pos Position of the adjacent block
+     * @param fromDirection Direction from which we're receiving power
      * @return Array with [SU, RPM] values
      */
     private float[] getSUAndRPMFromShaftInternal(Level level, BlockPos pos, Direction fromDirection) {
@@ -258,57 +299,53 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
         }
         
         try {
-            // First check if it's a shaft block
             var blockState = level.getBlockState(pos);
             var block = blockState.getBlock();
-            
-            // Check if it's a Create shaft block (only shafts, not cogwheels or other kinetic blocks)
             String blockName = block.getDescriptionId();
-            if (blockName.contains("shaft")) {
-                // Try to get the block entity (shafts have block entities)
-                var blockEntity = level.getBlockEntity(pos);
-                if (blockEntity != null) {
-                    // Try to access Create's KineticBlockEntity
-                    Class<?> kineticClass = Class.forName("com.simibubi.create.content.kinetics.base.KineticBlockEntity");
-                    if (kineticClass.isInstance(blockEntity)) {
-                        // Get RPM/speed from the shaft
-                        try {
-                            // Get rotation speed (RPM) - this is what we want
-                            var getSpeedMethod = kineticClass.getMethod("getSpeed");
-                            float speed = ((Number) getSpeedMethod.invoke(blockEntity)).floatValue();
-                            
-                            // Convert RPM to SU for our calculations
-                            // Higher RPM = more SU (used for recharge time calculation)
-                            // We use absolute value since speed can be negative (rotation direction)
-                            float rpm = Math.abs(speed);
-                            float su = rpm * 16.0f;
-                            if (su > 0.1f) {
-                                return new float[]{su, rpm}; // [SU, RPM]
-                            }
-                        } catch (NoSuchMethodException e) {
-                            // Fallback: Try to get stress capacity/usage
-                            try {
-                                var getCapacityMethod = kineticClass.getMethod("getCapacity");
-                                float capacity = ((Number) getCapacityMethod.invoke(blockEntity)).floatValue();
-                                if (capacity > 0.1f) {
-                                    // Estimate RPM from capacity (rough approximation)
-                                    float estimatedRPM = capacity / 16.0f;
-                                    return new float[]{capacity, estimatedRPM}; // [SU, RPM]
-                                }
-                            } catch (NoSuchMethodException e2) {
-                                // No methods available
-                            }
-                        }
+            
+            // Exclude cogs: do not accept power from cogwheels
+            if (blockName.contains("cog")) {
+                return new float[]{0.0f, 0.0f};
+            }
+            
+            var blockEntity = level.getBlockEntity(pos);
+            if (blockEntity == null) {
+                return new float[]{0.0f, 0.0f};
+            }
+            
+            Class<?> kineticClass = Class.forName("com.simibubi.create.content.kinetics.base.KineticBlockEntity");
+            if (!kineticClass.isInstance(blockEntity)) {
+                return new float[]{0.0f, 0.0f};
+            }
+            
+            // Any Create kinetic block (shaft, belt, gearbox, etc.) – get speed
+            try {
+                var getSpeedMethod = kineticClass.getMethod("getSpeed");
+                float speed = ((Number) getSpeedMethod.invoke(blockEntity)).floatValue();
+                float rpm = Math.abs(speed);
+                float su = rpm * 16.0f;
+                if (rpm > 0.1f) {
+                    return new float[]{su, rpm}; // [SU, RPM]
+                }
+            } catch (NoSuchMethodException e) {
+                try {
+                    var getCapacityMethod = kineticClass.getMethod("getCapacity");
+                    float capacity = ((Number) getCapacityMethod.invoke(blockEntity)).floatValue();
+                    if (capacity > 0.1f) {
+                        float estimatedRPM = capacity / 16.0f;
+                        return new float[]{capacity, estimatedRPM}; // [SU, RPM]
                     }
+                } catch (NoSuchMethodException e2) {
+                    // No methods available
                 }
             }
         } catch (ClassNotFoundException e) {
-            // Create classes not found - Create might not be loaded
+            // Create classes not found
         } catch (Exception e) {
-            // Create not available or API changed - return 0
+            // Create not available or API changed
         }
         
-        return new float[]{0.0f, 0.0f}; // [SU, RPM] - no shaft found
+        return new float[]{0.0f, 0.0f}; // [SU, RPM]
     }
     
     /**
@@ -1070,9 +1107,16 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                 );
             }
             
-            // Update power state: 0 = unpowered (red), 1 = powered (yellow)
+            // Update power state from RPM: 0 = blue (RPM < 12), 1 = yellow (12–32 RPM), 2 = red (32+ RPM)
             if (currentState.hasProperty(nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock.POWER_STATE)) {
-                int powerState = (currentSU > 0.1f) ? 1 : 0; // 1 = powered (yellow), 0 = unpowered (red)
+                int powerState;
+                if (currentRPM < RPM_THRESHOLD_MEDIUM) {
+                    powerState = 0; // Blue – like normal Cobblemon machine
+                } else if (currentRPM < RPM_THRESHOLD_FULL) {
+                    powerState = 1; // Yellow – medium (12–32 RPM)
+                } else {
+                    powerState = 2; // Red – full (32+ RPM)
+                }
                 newState = newState.setValue(
                     nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock.POWER_STATE,
                     powerState
@@ -1389,31 +1433,34 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     
     /**
      * Provides information for Create's goggles display system.
-     * This method is called by Create's goggles when a player looks at this block entity.
-     * Returns true if information was added, false otherwise.
+     * This method matches Create's IHaveGoggleInformation interface signature.
+     * Create's goggles system will call this method when a player looks at this block entity.
      * 
-     * @param player The player wearing goggles
      * @param tooltip List to add tooltip lines to
+     * @param isPlayerSneaking Whether the player is sneaking (for additional info)
      * @return true if information was added
      */
-    public boolean addToGoggleTooltip(Player player, java.util.List<net.minecraft.network.chat.Component> tooltip) {
+    public boolean addToGoggleTooltip(java.util.List<net.minecraft.network.chat.Component> tooltip, boolean isPlayerSneaking) {
         if (!ModList.get().isLoaded("create")) {
             return false;
         }
         
-        // Add RPM information
+        // Add RPM/Speed information (matches Create's format)
         if (currentRPM > 0.1f) {
-            tooltip.add(net.minecraft.network.chat.Component.translatable("create.goggles.kinetic_speed")
-                .append(": " + String.format("%.1f", currentRPM) + " RPM"));
+            tooltip.add(net.minecraft.network.chat.Component.literal("Speed: " + String.format("%.0f", currentRPM) + " RPM"));
         } else {
-            tooltip.add(net.minecraft.network.chat.Component.translatable("create.goggles.kinetic_speed")
-                .append(": " + net.minecraft.network.chat.Component.translatable("create.goggles.not_powered")));
+            tooltip.add(net.minecraft.network.chat.Component.literal("Speed: 0 RPM"));
         }
         
-        // Add SU (Stress Units) information
+        // Add Stress Capacity information (matches Create's format)
         if (currentSU > 0.1f) {
-            tooltip.add(net.minecraft.network.chat.Component.literal("Stress Units: " + String.format("%.1f", currentSU)));
+            tooltip.add(net.minecraft.network.chat.Component.literal("Stress Capacity: " + String.format("%.0f", currentSU) + " SU"));
+        } else {
+            tooltip.add(net.minecraft.network.chat.Component.literal("Stress Capacity: 0 SU"));
         }
+        
+        // Add Total Stress (currently 0, as we're consuming stress, not generating it)
+        tooltip.add(net.minecraft.network.chat.Component.literal("Total Stress: 0 SU"));
         
         // Add healing status
         if (isHealing) {
@@ -1424,7 +1471,11 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                 int minutes = remainingSeconds / 60;
                 int seconds = remainingSeconds % 60;
                 tooltip.add(net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.recharging", minutes, seconds));
+            } else {
+                tooltip.add(net.minecraft.network.chat.Component.literal("Ready to heal"));
             }
+        } else {
+            tooltip.add(net.minecraft.network.chat.Component.literal("Ready to heal"));
         }
         
         return true;

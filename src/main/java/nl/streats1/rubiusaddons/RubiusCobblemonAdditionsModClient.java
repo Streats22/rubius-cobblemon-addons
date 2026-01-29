@@ -26,7 +26,15 @@ public class RubiusCobblemonAdditionsModClient {
     
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
-        // Client-side setup code goes here
+        // Note: Create's goggles system likely uses instanceof to check for IHaveGoggleInformation
+        // Since Create is optional, we can't implement the interface directly.
+        // Our block entity has the addToGoggleTooltip method, but Create might not detect it
+        // if they use instanceof checks instead of reflection.
+        // 
+        // If goggles don't work, we may need to:
+        // 1. Check Create's source code to see how they detect goggle information
+        // 2. Use Create's event system if they have one for registering goggle providers
+        // 3. Create a wrapper class that implements the interface (complex)
     }
     
     /**
@@ -42,36 +50,24 @@ public class RubiusCobblemonAdditionsModClient {
     
     /**
      * Register block color handlers for power state visualization.
-     * Only tints the active indicator area (tintindex: 1), not the entire block.
-     * Red = unpowered, Yellow = powered by Create SU
+     * Only tints the indicator/lights area (tintindex: 1), like the normal Cobblemon healing machine.
+     * Blue = RPM &lt; 12, Yellow = 12–32 RPM, Red = 32+ RPM.
      */
     @SubscribeEvent
     static void registerBlockColors(RegisterColorHandlersEvent.Block event) {
         event.register(new BlockColor() {
             @Override
             public int getColor(BlockState state, BlockAndTintGetter level, BlockPos pos, int tintIndex) {
-                // Only tint the active indicator area (tintindex: 1)
                 if (tintIndex != 1) {
-                    return -1; // No tint for other faces
+                    return -1;
                 }
-                
-                // Check if healing (powered=true) - use active color (no special tint)
-                if (state.getValue(nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock.HEALING)) {
-                    return -1; // No tint when healing (use active texture)
-                }
-                
-                // Check power state: 0 = unpowered (red), 1 = powered (yellow)
                 int powerState = state.getValue(nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock.POWER_STATE);
-                
-                if (powerState == 0) {
-                    // Unpowered - red tint (RGB: 255, 0, 0)
-                    return 0xFF0000;
-                } else if (powerState == 1) {
-                    // Powered - yellow tint (RGB: 255, 255, 0)
-                    return 0xFFFF00;
-                }
-                
-                return -1; // Default: no tint
+                return switch (powerState) {
+                    case 0 -> 0x0064FF;  // Blue – normal (like Cobblemon healing machine active/charged lights)
+                    case 1 -> 0xFFCC00;  // Yellow – medium power (12 RPM / MD)
+                    case 2 -> 0xFF0000;  // Red – full power (FL)
+                    default -> 0x0064FF;
+                };
             }
         }, ModBlocks.CREATE_POWERED_HEALING_MACHINE.get());
     }

@@ -1,0 +1,20 @@
+# Materials for healing_machine.obj
+# dot_red / dot_blue = marker dots; shaft = 4x4 shaft stubs (left, right, bottom)
+
+newmtl shaft
+Ka 0.3 0.3 0.3
+Kd 0.5 0.5 0.5
+Ks 0.2 0.2 0.2
+Ns 32
+
+newmtl dot_red
+Ka 0.8 0.1 0.1
+Kd 1 0.2 0.2
+Ks 0.2 0.2 0.2
+Ns 32
+
+newmtl dot_blue
+Ka 0.1 0.1 0.8
+Kd 0.2 0.2 1
+Ks 0.2 0.2 0.2
+Ns 32

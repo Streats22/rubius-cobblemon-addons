@@ -1,10 +1,11 @@
 {
     "parent": "rubius_cobblemon_additions:block/create_powered_healing_machine_0",
     "textures": {
-        "all": "cobblemon:block/functional/healing_machine",
-        "active": "cobblemon:block/functional/healing_machine_active",
+        "all": "rubius_cobblemon_additions:block/healing_machine",
+        "active": "rubius_cobblemon_additions:block/healing_machine_active",
         "tray": "cobblemon:block/functional/healing_machine_tray",
-        "particle": "cobblemon:block/functional/healing_machine_particle"
+        "particle": "rubius_cobblemon_additions:block/healing_machine",
+        "shaft": "minecraft:block/iron_block"
     },
     "elements": [
         {
@@ -91,6 +92,42 @@
             "to": [ 12, 13, 13.99 ],
             "faces": {
                 "north": { "uv": [ 3, 0, 13, 1 ], "texture": "#active" }
+            }
+        },
+        {
+            "from": [ 0, 4, 6 ],
+            "to": [ 2, 8, 10 ],
+            "faces": {
+                "north": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" },
+                "east": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" },
+                "south": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" },
+                "west": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" },
+                "up": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" },
+                "down": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" }
+            }
+        },
+        {
+            "from": [ 14, 4, 6 ],
+            "to": [ 16, 8, 10 ],
+            "faces": {
+                "north": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" },
+                "east": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" },
+                "south": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" },
+                "west": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" },
+                "up": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" },
+                "down": { "uv": [ 0, 0, 4, 4 ], "texture": "#shaft" }
+            }
+        },
+        {
+            "from": [ 5, 0, 5 ],
+            "to": [ 11, 2, 11 ],
+            "faces": {
+                "north": { "uv": [ 0, 0, 6, 2 ], "texture": "#shaft" },
+                "east": { "uv": [ 0, 0, 6, 2 ], "texture": "#shaft" },
+                "south": { "uv": [ 0, 0, 6, 2 ], "texture": "#shaft" },
+                "west": { "uv": [ 0, 0, 6, 2 ], "texture": "#shaft" },
+                "up": { "uv": [ 0, 0, 6, 6 ], "texture": "#shaft" },
+                "down": { "uv": [ 0, 0, 6, 6 ], "texture": "#shaft" }
             }
         }
     ]
