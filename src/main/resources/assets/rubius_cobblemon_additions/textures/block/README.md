@@ -1,39 +1,18 @@
 # Block Textures
 
-This folder should contain the texture files for the Create-Powered Healing Machine block.
+Textures for the Create-Powered Healing Machine. Model paths use these names (case must match):
 
-## Required Textures
+- **healing_machine.png** – base (RPM &lt; 12, like default Cobblemon)
+- **healing_machine_create_md.png** – medium (12–32 RPM)
+- **healing_machine_create_fl.png** – full (32+ RPM)
+- **healing_machine_active.png** – active/healing base
+- **healing_machine_active_create_md_charge.png** – active medium
+- **healing_machine_active_create_fl_charge.png** – active full
 
-The following texture files are referenced in the block model:
-
-1. **create_powered_healing_machine_front.png** - Front face (where the healing interface is)
-2. **create_powered_healing_machine_back.png** - Back face
-3. **create_powered_healing_machine_side.png** - Left and right sides
-4. **create_powered_healing_machine_top.png** - Top face
-5. **create_powered_healing_machine_bottom.png** - Bottom face
-
-## Texture Specifications
+## Specs
 
 - **Format**: PNG
-- **Size**: 16x16 pixels (standard Minecraft block texture size)
-- **Location**: Place all textures in this folder (`textures/block/`)
+- **Size**: 16×16 (or match the base model’s UV layout) so the block doesn’t show purple/black (missing texture).
+- **Location**: this folder (`textures/block/`)
 
-## Creating Textures
-
-You can:
-1. Use the Cobblemon healing machine texture as a base and add Create cogwheel elements
-2. Create custom textures from scratch
-3. Use texture editing tools like:
-   - Paint.NET
-   - GIMP
-   - Aseprite
-   - Blockbench (for 3D models)
-
-## Temporary Solution
-
-Until custom textures are created, you can temporarily use placeholder textures by:
-1. Copying textures from `cobblemon:healing_machine` 
-2. Using Minecraft's default block textures (like `minecraft:block/iron_block`)
-3. Creating simple colored placeholder textures
-
-To use placeholder textures, edit `models/block/create_powered_healing_machine.json` and change the texture paths to reference existing textures.
+If the block turns purple/black when powered, check that these files exist here and that their names match the paths above exactly (including MD/FL casing).

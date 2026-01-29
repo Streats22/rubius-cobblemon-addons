@@ -29,7 +29,7 @@ public class CreatePoweredHealingMachineBlock extends Block implements EntityBlo
     
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty HEALING = BlockStateProperties.POWERED; // Reuse POWERED property for healing state (active model)
-    // Power state from RPM: 0 = RPM < 12 (blue), 1 = 12–32 RPM (yellow), 2 = 32+ RPM (red). Light: 5/5/12.
+    // Power state from RPM: 0 = default Cobblemon-like (blue), 1 = 12–32 RPM (yellow), 2 = 32+ RPM (red). Light: 5/8/12.
     public static final IntegerProperty POWER_STATE = BlockStateProperties.LEVEL; // Reuse LEVEL property (0, 1, 2)
     
     // Custom VoxelShapes matching Cobblemon's HealingMachineBlock to prevent clipping

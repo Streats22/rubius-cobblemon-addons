@@ -10,15 +10,19 @@ public class ModBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(RubiusCobblemonAdditions.MOD_ID);
     
     /**
-     * Light emission like Cobblemon healing machine: always on when placed.
-     * State 0 (RPM &lt; 12) = blue lights, level 5. State 1 (12-32 RPM) = yellow, level 5. State 2 (32+ RPM) = red, level 12.
+     * Light like default Cobblemon healing machine when no Create power; scales with RPM.
+     * State 0 (RPM &lt; 12) = some light (5), state 1 (12–32 RPM) = more (8), state 2 (32+ RPM) = max (12).
      */
     public static final DeferredBlock<Block> CREATE_POWERED_HEALING_MACHINE = BLOCKS.register(
         "create_powered_healing_machine",
         () -> new CreatePoweredHealingMachineBlock(Block.Properties.of()
             .strength(3.5f)
             .requiresCorrectToolForDrops()
-            .lightLevel(state -> state.getValue(CreatePoweredHealingMachineBlock.POWER_STATE) == 2 ? 12 : 5)
+            .lightLevel(state -> switch (state.getValue(CreatePoweredHealingMachineBlock.POWER_STATE)) {
+                case 2 -> 12;  // 32+ RPM = max
+                case 1 -> 8;   // 12–32 RPM = more
+                default -> 5;  // 0 RPM = some (like default Cobblemon machine)
+            })
         )
     );
 

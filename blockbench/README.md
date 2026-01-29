@@ -46,13 +46,18 @@ Coordinates are in **block space** (0–16 per axis). You can edit cubes and UVs
 
 ## Raw voxel mesh (OBJ)
 
-**healing_machine.obj** is the same geometry as a single **Wavefront OBJ** mesh for editing in Blockbench or any 3D app.
+### create_healingmachine.obj (no shafts)
 
-**Your style (grid blocks):** In this file, **1 unit = 1 of your grid blocks**. So:
-- **Stub** = **1 block × 1 block** (1×1 units) — the central shaft
-- **Indent** = **1 block** (1 unit) around the stub — the sunken ring
-- **Ring hole** = **3×3 blocks** (1 + 1 + 1 on each side)
+**create_healingmachine.obj** is your main OBJ – no shaft stubs, so you don’t have to force shafts into the design.
 
-- **Coordinates**: Minecraft model space, 0–16 per axis (Y = up). Full block = 16 units.
-- **Contents**: Base body, tray, indicators; **left, right, bottom** each have a **4×4 block stub** with a **1-block** sunken ring around it. Marker dots (red/blue).
-- **No UVs**: OBJ has no UV data; re-unwrap in your editor or use the JSON models for textured export.
+- **create_healingmachine.mtl** – material file for this OBJ. One material, `body`, for the whole mesh. Keep it next to the OBJ when opening in Blockbench or Blender.
+- The OBJ already has `mtllib create_healingmachine.mtl` and `usemtl body` at the top so it uses this MTL.
+
+### healing_machine.obj (with shaft stubs)
+
+**healing_machine.obj** is an alternate OBJ with shaft geometry (1×1 stubs, 1-block indent on left/right/bottom). Uses **healing_machine.mtl** (body, shaft, dot_red, dot_blue).
+
+**Your style (grid blocks):** 1 unit = 1 grid block. Stub = 1×1, indent = 1 block, ring = 3×3.
+
+- **Coordinates**: Minecraft model space, 0–16 per axis (Y = up).
+- **No UVs** in OBJ; re-unwrap in your editor or use the JSON models for textured export.
