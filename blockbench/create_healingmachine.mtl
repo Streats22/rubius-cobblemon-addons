@@ -1,0 +1,8 @@
+# Material for create_healingmachine.obj
+# Single body material – no shaft stubs; use in Blockbench/Blender
+
+newmtl body
+Ka 0.4 0.4 0.4
+Kd 0.7 0.7 0.7
+Ks 0.2 0.2 0.2
+Ns 32
