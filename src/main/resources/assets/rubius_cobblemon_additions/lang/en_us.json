@@ -12,5 +12,9 @@
   "message.rubius_cobblemon_additions.healing_machine.in.use": "This healing machine is already in use!",
   "message.rubius_cobblemon_additions.healing_machine.no.heal.needed": "Your Pokemon are already at full health!",
   "message.rubius_cobblemon_additions.healing_machine.start": "Healing started...",
-  "message.rubius_cobblemon_additions.healing_machine.complete": "Your Pokemon have been healed!"
+  "message.rubius_cobblemon_additions.healing_machine.complete": "Your Pokemon have been healed!",
+  "gui.rubius_cobblemon_additions.cobbledollars_shop": "Villager Shop",
+  "gui.rubius_cobblemon_additions.trades": "Trades",
+  "gui.rubius_cobblemon_additions.search": "Search",
+  "gui.rubius_cobblemon_additions.buy": "Buy"
 }

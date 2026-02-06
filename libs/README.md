@@ -1,45 +1,13 @@
-# libs/ Folder - Cobblemon Dependency
+# libs/ Folder
 
-## Quick Setup Instructions
+**This project does not require any JARs in this folder to build.**
 
-1. **Download Cobblemon 1.7.1**:
-   - Go to https://www.curseforge.com/minecraft/mc-mods/cobblemon/files
-   - OR https://modrinth.com/mod/cobblemon
-   - Download the **NeoForge** version for **Minecraft 1.21.1**
-   - Look for version **1.7.1** (or latest 1.7.x)
+Cobblemon is supplied via **Maven** in `build.gradle` (Impact Maven repo). The file `cobblemon-1.7.1-neoforge.jar` here is a **placeholder** (minimal JAR) so the IDE does not report a missing library; the real Cobblemon dependency comes from Maven. Do not replace it with a full Cobblemon JAR unless you switch to the local JAR option in `build.gradle`.
 
-2. **Place the JAR file here**:
-   - Rename it to: `cobblemon-1.7.1-neoforge.jar`
-   - Or keep the original name, but update `build.gradle` to match
+If your IDE reports a missing library like `libs/cobblemon-1.7.1-neoforge.jar`:
 
-3. **Dependency is already configured**:
-   - The dependency lines in `build.gradle` are already uncommented
-   - Just make sure the filename matches: `cobblemon-1.7.1-neoforge.jar`
-   - If your JAR has a different name, update `build.gradle` to match
+1. **VS Code**: Run **Java: Clean Java Language Server Workspace** from the command palette, then reload the window. Ensure the project is imported from Gradle (not an old Eclipse classpath).
+2. **IntelliJ**: **File → Invalidate Caches → Invalidate and Restart**, then **Reload Gradle Project**.
+3. **Command line**: `./gradlew clean build --refresh-dependencies` (build should succeed without any files in `libs/`).
 
-4. **Sync Gradle**:
-   - In your IDE, click "Sync Gradle" or "Reload Gradle Project"
-   - Or run: `./gradlew build --refresh-dependencies`
-
-5. **Verify**:
-   - After syncing, you should see Cobblemon classes available in your IDE
-   - The build should complete without "Could not find" errors for Cobblemon
-
-## Alternative: CurseForge Maven
-
-If you prefer using CurseForge Maven instead:
-
-1. Go to https://www.curseforge.com/minecraft/mc-mods/cobblemon/files
-2. Find Cobblemon 1.7.1 NeoForge for MC 1.21.1
-3. Click on the file to see its details
-4. Look for the "Maven" snippet - it will show the file ID
-5. In `build.gradle`, uncomment and update:
-   ```groovy
-   implementation "curse.maven:cobblemon-687131:XXXXXX" // Replace XXXXXX with file ID
-   ```
-
-## Troubleshooting
-
-- **"Could not find" error**: Make sure the JAR filename in `build.gradle` matches the actual filename in `libs/`
-- **"Class not found" errors**: Make sure you uncommented BOTH `compileOnly` and `localRuntime` lines
-- **IDE doesn't see Cobblemon**: Try "Invalidate Caches / Restart" in your IDE, then sync Gradle again
+Optional fallback: if Maven is unavailable, you can use a local JAR by uncommenting the `files("libs/cobblemon-1.7.2-neoforge.jar")` lines in `build.gradle` and placing the matching JAR here (filename must match exactly).

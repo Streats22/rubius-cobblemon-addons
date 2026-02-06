@@ -28,4 +28,6 @@ repo
 # Dependencies - JAR files should not be committed
 libs/*.jar
 !libs/README.md
+# Placeholder so IDE does not reference missing libs/cobblemon-1.7.1-neoforge.jar (Cobblemon is from Maven)
+!libs/cobblemon-1.7.1-neoforge.jar
 !gradle/wrapper/gradle-wrapper.jar

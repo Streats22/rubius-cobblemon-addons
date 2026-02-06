@@ -53,11 +53,7 @@ This is a NeoForge mod for Minecraft 1.21.1 that adds integrations between Cobbl
 ./setup-cobblemon.sh
 ```
 
-**Option 2:** Download pre-built JAR from:
-- CurseForge: https://www.curseforge.com/minecraft/mc-mods/cobblemon/files
-- Modrinth: https://modrinth.com/mod/cobblemon
-
-Place `cobblemon-1.7.1-neoforge.jar` in the `libs/` folder.
+**Option 2:** The project uses **Maven** for Cobblemon (Impact Maven); no JAR in `libs/` is required. If the IDE reports a missing `libs/cobblemon-1.7.1-neoforge.jar`, run **Java: Clean Java Language Server Workspace** (VS Code) or refresh Gradle / invalidate caches (IntelliJ). See `libs/README.md`.
 
 **KotlinForge Requirement:** Cobblemon requires KotlinForge language provider. Download from CurseForge and place in `run/mods/` folder for runtime.
 
@@ -224,8 +220,8 @@ Run: `./gradlew --refresh-dependencies`
 ### Build Issues
 Run: `./gradlew clean` then rebuild
 
-### Cobblemon Not Found
-Ensure `cobblemon-1.7.1-neoforge.jar` exists in `libs/` folder
+### Cobblemon Not Found / IDE "libs/cobblemon...jar" Error
+Cobblemon is supplied via Maven in `build.gradle`. No file in `libs/` is needed. If the IDE still references a missing libs JAR, clean the Java language server workspace and reload, or run `./gradlew --refresh-dependencies`.
 
 ### KotlinForge Issues
 Ensure KotlinForge 5.3+ JAR is in `run/mods/` folder when running the game

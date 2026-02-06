@@ -28,6 +28,30 @@ public class Config {
             .comment("A list of items to log on common setup.")
             .defineListAllowEmpty("items", List.of("minecraft:iron_ingot"), () -> "", Config::validateItemName);
 
+    // CobbleDollars integration: exchange rate for villager trades (1 emerald = X CobbleDollars)
+    // See CobbleDollars docs: https://harmex.gitbook.io/cobbledollars/configuration/default-shop
+    // Bank config: config/cobbledollars/bank.json has "bank": [{"item": "minecraft:emerald", "price": 500}]
+    public static final ModConfigSpec.IntValue COBBLEDOLLARS_EMERALD_RATE = BUILDER
+            .comment("CobbleDollars per 1 emerald when paying villagers. Default 500 matches CobbleDollars bank. Ignored if syncCobbleDollarsBankRate is true and their bank.json is found.")
+            .defineInRange("cobbledollarsEmeraldRate", 500, 1, Integer.MAX_VALUE);
+
+    public static final ModConfigSpec.BooleanValue SYNC_COBBLEDOLLARS_BANK_RATE = BUILDER
+            .comment("If true, use the emerald price from CobbleDollars' config/cobbledollars/bank.json so villager rate matches their bank (1 emerald = X). Falls back to cobbledollarsEmeraldRate if file not found.")
+            .define("syncCobbleDollarsBankRate", true);
+
+    public static final ModConfigSpec.ConfigValue<String> COBBLEDOLLARS_CURRENCY_SYMBOL = BUILDER
+            .comment("Currency symbol shown in the villager shop UI (e.g. \" C$\" or \" €\" to match CobbleDollars).")
+            .define("cobbleDollarsCurrencySymbol", " C$");
+
+    public static final ModConfigSpec.BooleanValue VILLAGERS_ACCEPT_COBBLEDOLLARS = BUILDER
+            .comment("If true (and CobbleDollars mod is present), villager trades that cost emeralds can be paid with CobbleDollars balance instead.")
+            .define("villagersAcceptCobbleDollars", true);
+
+    /** When true and CobbleDollars is present, right-clicking a villager opens the CobbleDollars-style shop screen instead of the vanilla trading GUI. */
+    public static final ModConfigSpec.BooleanValue USE_COBBLEDOLLARS_SHOP_UI = BUILDER
+            .comment("Use CobbleDollars-style shop UI when trading with villagers (tabs, list, search, balance). Requires CobbleDollars mod.")
+            .define("useCobbleDollarsShopUi", true);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     private static boolean validateItemName(final Object obj) {

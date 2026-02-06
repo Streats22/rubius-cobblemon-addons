@@ -2,6 +2,33 @@
 
 This folder contains the Create-powered healing machine block models in **Minecraft Java Block Model** format, ready to open in Blockbench.
 
+---
+
+## Which file is the “right” block? (48×43×48 and OBJ)
+
+You have three related files:
+
+| File | Format | Use in Blockbench |
+|------|--------|--------------------|
+| **healing_machine_create.obj** | Wavefront OBJ (3D mesh) | **This is the one to load.** File → **Import** → **Import OBJ**. |
+| **healing_machine_create_48x43x48.json** | Voxel list (47×42×47 voxels + RGB) | Not a Blockbench project. Raw voxel data – don’t open as “Minecraft Block” or “Generic Model”. |
+| **healing_machine_create_48x43x48(1).json** | Same as above (duplicate copy) | Same as above. |
+
+So: **use the .obj** when you want to load the 3D model into Blockbench. The two JSONs are voxel exports (list of coloured cubes), not Blockbench/Minecraft model JSON.
+
+### If the OBJ “doesn’t look right” in Blockbench
+
+- **Scale**  
+  The name “48x43x48” means the original voxel grid was 48×43×48. In Minecraft one block = 16 units, so this model is **3× larger** than one block (48÷16=3). After importing the OBJ in Blockbench, select the whole model and **scale it down** (e.g. Scale → 0.333 or 1/3 on X and Z, and about 16/43 ≈ 0.37 on Y) so it fits in a 16×16×16 block space.
+
+- **Origin / position**  
+  The mesh might be offset. After scaling, use **Move** in Blockbench to centre it in 0–16 on X and Z, and sit on Y=0.
+
+- **No textures**  
+  OBJ often has no UVs. You can re-unwrap in Blockbench or use the existing JSON models (below) for textured versions.
+
+---
+
 ## How to open in Blockbench
 
 1. Open **Blockbench**.
