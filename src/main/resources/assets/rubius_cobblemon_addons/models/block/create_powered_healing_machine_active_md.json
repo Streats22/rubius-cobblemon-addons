@@ -1,0 +1,9 @@
+{
+  "parent": "rubius_cobblemon_addons:block/create_powered_healing_machine_active",
+  "textures": {
+    "all": "rubius_cobblemon_addons:block/healing_machine_create_md",
+    "active": "rubius_cobblemon_addons:block/healing_machine_active_create_md_charge",
+    "tray": "cobblemon:block/functional/healing_machine_tray",
+    "particle": "rubius_cobblemon_addons:block/healing_machine_create_md"
+  }
+}

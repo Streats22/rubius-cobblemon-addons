@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "nl.streats1.rubiusaddons.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ExtendedDespawnMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

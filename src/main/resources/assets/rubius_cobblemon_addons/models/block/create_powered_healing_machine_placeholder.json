@@ -1,0 +1,13 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "minecraft:block/iron_block",
+    "down": "minecraft:block/iron_block",
+    "up": "minecraft:block/iron_block",
+    "north": "minecraft:block/iron_block",
+    "east": "minecraft:block/iron_block",
+    "south": "minecraft:block/iron_block",
+    "west": "minecraft:block/iron_block"
+  },
+  "comment": "This is a placeholder model using iron_block textures. Replace create_powered_healing_machine.json with this content temporarily, or create custom textures."
+}

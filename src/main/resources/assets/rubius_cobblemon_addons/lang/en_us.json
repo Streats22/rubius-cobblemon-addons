@@ -1,0 +1,24 @@
+{
+  "itemGroup.rubiusadditions": "Rubius Cobblemon: Additions",
+  "rubiusaddon.configuration.title": "Rubius Cobblemon: Additions config",
+  "rubiusaddon.configuration.section.rubiusaddon.common.toml": "Rubius Cobblemon: additions Configs",
+  "rubiusaddon.configuration.section.rubiusaddon.common.toml.title": "Rubius Cobblemon: additions Mod Configs",
+  
+  "block.rubius_cobblemon_addons.create_powered_healing_machine": "Create-Powered Healing Machine",
+  "block.rubius_cobblemon_addons.create_powered_healing_machine.description": "A healing machine powered by Create's rotation system. When powered with 12+ RPM, reduces healing time by 10 seconds. At 36 RPM, healing is instant.",
+  
+  "message.rubius_cobblemon_addons.healing_machine.in.battle": "You cannot heal during battle!",
+  "message.rubius_cobblemon_addons.healing_machine.recharging": "Healing machine is recharging... %1$d:%2$02d remaining",
+  "message.rubius_cobblemon_addons.healing_machine.in.use": "This healing machine is already in use!",
+  "message.rubius_cobblemon_addons.healing_machine.no.heal.needed": "Your Pokemon are already at full health!",
+  "message.rubius_cobblemon_addons.healing_machine.start": "Healing started...",
+  "message.rubius_cobblemon_addons.healing_machine.complete": "Your Pokemon have been healed!",
+  "gui.rubius_cobblemon_additions.cobbledollars_shop": "CobbleDollars Shop",
+  "gui.rubius_cobblemon_additions.shop": "Shop",
+  "gui.rubius_cobblemon_additions.balance": "Balance",
+  "gui.rubius_cobblemon_additions.search": "Search",
+  "gui.rubius_cobblemon_additions.buy": "Buy",
+  "gui.rubius_cobblemon_additions.sell": "Sell",
+  "gui.rubius_cobblemon_additions.trades": "Trades",
+  "gui.rubius_cobblemon_additions.no_trades": "No trades"
+}

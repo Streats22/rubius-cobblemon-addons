@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CSB",
+    "SHS",
+    "BSC"
+  ],
+  "key": {
+    "S": {
+      "item": "create:shaft"
+    },
+    "B": {
+      "item": "create:brass_ingot"
+    },
+    "C": {
+      "item": "create:cogwheel"
+    },
+    "H": {
+      "item": "cobblemon:healing_machine"
+    }
+  },
+  "result": {
+    "id": "rubius_cobblemon_addons:create_powered_healing_machine",
+    "count": 1
+  }
+}
