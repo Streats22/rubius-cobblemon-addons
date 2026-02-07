@@ -18,7 +18,7 @@ public class ModCreativeTabs {
     );
 
     public static final Supplier<CreativeModeTab> RUBIUS_COBBLEMON_ADDITIONS_TAB = CREATIVE_TABS.register(
-        "rubius_cobblemon_additions",
+        "rubius_cobblemon_addons",
         () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.rubiusadditions"))
             .icon(() -> {

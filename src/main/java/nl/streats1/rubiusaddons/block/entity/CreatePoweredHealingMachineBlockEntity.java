@@ -180,6 +180,9 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     // Recharge tracking (time when healing completed, used to calculate recharge cooldown)
     private long rechargeStartTime = 0; // Game time when recharge started (after healing completed)
     
+    // Last power state (0/1/2) so we update block state when RPM crosses thresholds (level/animation change)
+    private int lastPowerState = -1;
+    
     public CreatePoweredHealingMachineBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CREATE_POWERED_HEALING_MACHINE.get(), pos, state);
     }
@@ -189,12 +192,18 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             return;
         }
         
-        // Update SU from Create rotation system
+        // Update SU and RPM from Create rotation system
         float oldSU = blockEntity.currentSU;
         blockEntity.updateSU(level, pos);
         
-        // Update block state if SU changed (to update color from red to yellow)
-        if (Math.abs(oldSU - blockEntity.currentSU) > 0.1f) {
+        // Update block state when SU changes or when RPM crosses thresholds (so level/animation updates)
+        int newPowerState = blockEntity.getPowerStateFromRPM();
+        boolean suChanged = Math.abs(oldSU - blockEntity.currentSU) > 0.1f;
+        boolean powerStateChanged = newPowerState != blockEntity.lastPowerState;
+        if (suChanged || powerStateChanged) {
+            if (powerStateChanged) {
+                blockEntity.lastPowerState = newPowerState;
+            }
             blockEntity.updateBlockState(blockEntity.isHealing);
         }
         
@@ -462,7 +471,7 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             // Check if player is in battle - prevent healing during battle
             if (isPlayerInBattle(player)) {
                 if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                    var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.in.battle");
+                    var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_addons.healing_machine.in.battle");
                     try {
                         serverPlayer.sendSystemMessage(message, true); // Action bar message
                     } catch (Exception e) {
@@ -481,7 +490,7 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                     int minutes = remainingSeconds / 60;
                     int seconds = remainingSeconds % 60;
                     var message = net.minecraft.network.chat.Component.translatable(
-                        "message.rubius_cobblemon_additions.healing_machine.recharging", 
+                        "message.rubius_cobblemon_addons.healing_machine.recharging", 
                         minutes, seconds
                     );
                     try {
@@ -509,7 +518,7 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
                     } else {
                         // Different player trying to use - show message
                         if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                            var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.in.use");
+                            var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_addons.healing_machine.in.use");
                             serverPlayer.sendSystemMessage(message, true); // Action bar message
                         }
                         return InteractionResult.CONSUME;
@@ -518,7 +527,7 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             } else {
                 // Player has no Pokemon that need healing
                 if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                    var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.no.heal.needed");
+                    var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_addons.healing_machine.no.heal.needed");
                     serverPlayer.sendSystemMessage(message, true); // Action bar message
                 }
                 return InteractionResult.PASS;
@@ -920,7 +929,7 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             // Send healing started message (same as normal healing machine)
             if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
                 try {
-                    var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.start");
+                    var message = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_addons.healing_machine.start");
                     serverPlayer.sendSystemMessage(message, true); // Action bar message
                 } catch (Exception e) {
                     // Fallback message if translation key doesn't exist
@@ -1083,6 +1092,19 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
     }
     
     /**
+     * Returns power state (0/1/2) from current RPM for block state / model selection.
+     */
+    private int getPowerStateFromRPM() {
+        if (currentRPM < RPM_THRESHOLD_MEDIUM) {
+            return 0;
+        }
+        if (currentRPM < RPM_THRESHOLD_FULL) {
+            return 1;
+        }
+        return 2;
+    }
+    
+    /**
      * Updates the block state to reflect healing status and power state (for animations and colors).
      */
     private void updateHealingState(boolean healing) {
@@ -1109,14 +1131,8 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             
             // Update power state from RPM: 0 = blue (RPM < 12), 1 = yellow (12–32 RPM), 2 = red (32+ RPM)
             if (currentState.hasProperty(nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock.POWER_STATE)) {
-                int powerState;
-                if (currentRPM < RPM_THRESHOLD_MEDIUM) {
-                    powerState = 0; // Blue – like normal Cobblemon machine
-                } else if (currentRPM < RPM_THRESHOLD_FULL) {
-                    powerState = 1; // Yellow – medium (12–32 RPM)
-                } else {
-                    powerState = 2; // Red – full (32+ RPM)
-                }
+                int powerState = getPowerStateFromRPM();
+                lastPowerState = powerState;
                 newState = newState.setValue(
                     nl.streats1.rubiusaddons.block.CreatePoweredHealingMachineBlock.POWER_STATE,
                     powerState
@@ -1260,7 +1276,7 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
      */
     private void sendHealingCompleteMessage(net.minecraft.server.level.ServerPlayer serverPlayer) {
         try {
-            var messageComponent = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.complete");
+            var messageComponent = net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_addons.healing_machine.complete");
             serverPlayer.sendSystemMessage(messageComponent, true); // Action bar message
         } catch (Exception e) {
             // Translation key might not exist, use fallback
@@ -1425,7 +1441,9 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
             }
         }
         
-        // Update block state to match healing status and power state
+        // Sync power state so next tick doesn’t think it changed
+        lastPowerState = getPowerStateFromRPM();
+        // Update block state to match healing status and power state (so client sees correct level/RPM)
         if (level != null && !level.isClientSide) {
             updateBlockState(isHealing);
         }
@@ -1464,13 +1482,13 @@ public class CreatePoweredHealingMachineBlockEntity extends BlockEntity {
         
         // Add healing status
         if (isHealing) {
-            tooltip.add(net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.start"));
+            tooltip.add(net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_addons.healing_machine.start"));
         } else if (rechargeStartTime > 0 && level != null) {
             int remainingSeconds = getRemainingRechargeTime(level);
             if (remainingSeconds > 0) {
                 int minutes = remainingSeconds / 60;
                 int seconds = remainingSeconds % 60;
-                tooltip.add(net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_additions.healing_machine.recharging", minutes, seconds));
+                tooltip.add(net.minecraft.network.chat.Component.translatable("message.rubius_cobblemon_addons.healing_machine.recharging", minutes, seconds));
             } else {
                 tooltip.add(net.minecraft.network.chat.Component.literal("Ready to heal"));
             }

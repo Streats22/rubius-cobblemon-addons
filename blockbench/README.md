@@ -29,6 +29,8 @@ So: **use the .obj** when you want to load the 3D model into Blockbench. The two
 
 ---
 
+**New 48×43×48 model:** See **[EXPORT_NEW_MODEL.md](EXPORT_NEW_MODEL.md)** for how to export `healing_machine_create_48x43x48_1_color_48x43x48` from Blockbench and use it in the mod with the normal texture.
+
 ## How to open in Blockbench
 
 1. Open **Blockbench**.
@@ -55,11 +57,11 @@ To have Blockbench find your mod’s textures:
 1. In Blockbench: **File → Project Settings** (or **Preferences**).
 2. Set the **Minecraft Assets** or **Resource pack path** to your mod’s assets folder, e.g.  
    `src/main/resources/assets/`  
-   so that paths like `rubius_cobblemon_additions:block/healing_machine` resolve.
+   so that paths like `rubius_cobblemon_addons:block/healing_machine` resolve.
 3. Or add textures manually: **Texture tab → Add Texture** and assign your PNGs to the slots above.
 
 Texture files are in:  
-`src/main/resources/assets/rubius_cobblemon_additions/textures/block/`
+`src/main/resources/assets/rubius_cobblemon_addons/textures/block/`
 
 ## Model structure (base)
 

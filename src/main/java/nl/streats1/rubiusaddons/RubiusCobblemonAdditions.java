@@ -31,6 +31,7 @@ import nl.streats1.rubiusaddons.integration.VillagerCobbleDollarsHandler;
 import nl.streats1.rubiusaddons.network.CobbleDollarsShopPayloadHandlers;
 import nl.streats1.rubiusaddons.network.CobbleDollarsShopPayloads;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.npc.WanderingTrader;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -41,7 +42,7 @@ import org.jetbrains.annotations.NotNull;
 @Mod(RubiusCobblemonAdditions.MOD_ID)
 public class RubiusCobblemonAdditions {
     // Define mod id in a common place for everything to reference
-    public static final String MOD_ID = "rubius_cobblemon_additions";
+    public static final String MOD_ID = "rubius_cobblemon_addons";
     // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
 
@@ -112,7 +113,13 @@ public class RubiusCobblemonAdditions {
     private void handleVillagerShopInteract(net.minecraft.world.entity.Entity target, boolean isClientSide,
             Runnable cancelAction, java.util.function.IntSupplier getId) {
         if (!Config.USE_COBBLEDOLLARS_SHOP_UI.get() || !CobbleDollarsIntegration.isModLoaded()) return;
-        if (!(target instanceof Villager) && !(target instanceof WanderingTrader)) return;
+        if (target instanceof Villager villager) {
+            // Like vanilla: only open our shop for villagers with a job (not unemployed, not nitwit)
+            VillagerProfession prof = villager.getVillagerData().getProfession();
+            if (prof == VillagerProfession.NONE || prof == VillagerProfession.NITWIT) return;
+        } else if (!(target instanceof WanderingTrader)) {
+            return;
+        }
 
         cancelAction.run();
         if (isClientSide) {

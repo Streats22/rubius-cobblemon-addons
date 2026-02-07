@@ -4,6 +4,6 @@
   "rubiusaddon.configuration.section.rubiusaddon.common.toml": "Rubius Cobblemon: additions Configs",
   "rubiusaddon.configuration.section.rubiusaddon.common.toml.title": "Rubius Cobblemon: additions Mod Configs",
   
-  "block.rubius_cobblemon_additions.create_powered_healing_machine": "Create-Powered Healing Machine",
-  "block.rubius_cobblemon_additions.create_powered_healing_machine.description": "A healing machine powered by Create's rotation system. When powered with 12+ RPM, reduces healing time by 10 seconds. At 36 RPM, healing is instant."
+  "block.rubius_cobblemon_addons.create_powered_healing_machine": "Create-Powered Healing Machine",
+  "block.rubius_cobblemon_addons.create_powered_healing_machine.description": "A healing machine powered by Create's rotation system. When powered with 12+ RPM, reduces healing time by 10 seconds. At 36 RPM, healing is instant."
 }

@@ -52,6 +52,19 @@ public class Config {
             .comment("Use CobbleDollars-style shop UI when trading with villagers (tabs, list, search, balance). Requires CobbleDollars mod.")
             .define("useCobbleDollarsShopUi", true);
 
+    // --- Extended despawn (rare / ultra rare / shiny) ---
+    public static final ModConfigSpec.DoubleValue EXTENDED_DESPAWN_MULTIPLIER_SHINY = BUILDER
+            .comment("Extended despawn: shiny wild Pokémon stay longer. Multiplier on Cobblemon despawn time (e.g. 2.0 = twice as long). 1.0 = no change.")
+            .defineInRange("extendedDespawn.shinyMultiplier", 2.0, 1.0, 20.0);
+
+    public static final ModConfigSpec.DoubleValue EXTENDED_DESPAWN_MULTIPLIER_RARE = BUILDER
+            .comment("Extended despawn: rare spawn wild Pokémon stay longer. 1.0 = no change.")
+            .defineInRange("extendedDespawn.rareMultiplier", 1.5, 1.0, 20.0);
+
+    public static final ModConfigSpec.DoubleValue EXTENDED_DESPAWN_MULTIPLIER_ULTRA_RARE = BUILDER
+            .comment("Extended despawn: ultra rare spawn wild Pokémon stay longer. 1.0 = no change.")
+            .defineInRange("extendedDespawn.ultraRareMultiplier", 2.0, 1.0, 20.0);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     private static boolean validateItemName(final Object obj) {

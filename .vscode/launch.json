@@ -12,13 +12,13 @@
       "projectName": "rubius-cobblemon-addons",
       "mainClass": "net.neoforged.devlaunch.Main",
       "args": [
-        "@/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/build/moddev/clientRunProgramArgs.txt"
+        "@E:\\rubius-cobblemon-addons\\build\\moddev\\clientRunProgramArgs.txt"
       ],
       "vmArgs": [
-        "@/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/build/moddev/clientRunVmArgs.txt",
-        "-Dfml.modFolders\u003drubius_cobblemon_additions%%/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/bin/main"
+        "@E:\\rubius-cobblemon-addons\\build\\moddev\\clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003drubius_cobblemon_addons%%E:\\rubius-cobblemon-addons\\bin\\main"
       ],
-      "cwd": "${workspaceFolder}/run",
+      "cwd": "${workspaceFolder}\\run",
       "env": {},
       "console": "internalConsole",
       "shortenCommandLine": "none"
@@ -34,13 +34,13 @@
       "projectName": "rubius-cobblemon-addons",
       "mainClass": "net.neoforged.devlaunch.Main",
       "args": [
-        "@/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/build/moddev/dataRunProgramArgs.txt"
+        "@E:\\rubius-cobblemon-addons\\build\\moddev\\dataRunProgramArgs.txt"
       ],
       "vmArgs": [
-        "@/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/build/moddev/dataRunVmArgs.txt",
-        "-Dfml.modFolders\u003drubius_cobblemon_additions%%/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/bin/main"
+        "@E:\\rubius-cobblemon-addons\\build\\moddev\\dataRunVmArgs.txt",
+        "-Dfml.modFolders\u003drubius_cobblemon_addons%%E:\\rubius-cobblemon-addons\\bin\\main"
       ],
-      "cwd": "${workspaceFolder}/run",
+      "cwd": "${workspaceFolder}\\run",
       "env": {},
       "console": "internalConsole",
       "shortenCommandLine": "none"
@@ -56,13 +56,13 @@
       "projectName": "rubius-cobblemon-addons",
       "mainClass": "net.neoforged.devlaunch.Main",
       "args": [
-        "@/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/build/moddev/gameTestServerRunProgramArgs.txt"
+        "@E:\\rubius-cobblemon-addons\\build\\moddev\\gameTestServerRunProgramArgs.txt"
       ],
       "vmArgs": [
-        "@/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/build/moddev/gameTestServerRunVmArgs.txt",
-        "-Dfml.modFolders\u003drubius_cobblemon_additions%%/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/bin/main"
+        "@E:\\rubius-cobblemon-addons\\build\\moddev\\gameTestServerRunVmArgs.txt",
+        "-Dfml.modFolders\u003drubius_cobblemon_addons%%E:\\rubius-cobblemon-addons\\bin\\main"
       ],
-      "cwd": "${workspaceFolder}/run",
+      "cwd": "${workspaceFolder}\\run",
       "env": {},
       "console": "internalConsole",
       "shortenCommandLine": "none"
@@ -78,13 +78,13 @@
       "projectName": "rubius-cobblemon-addons",
       "mainClass": "net.neoforged.devlaunch.Main",
       "args": [
-        "@/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/build/moddev/serverRunProgramArgs.txt"
+        "@E:\\rubius-cobblemon-addons\\build\\moddev\\serverRunProgramArgs.txt"
       ],
       "vmArgs": [
-        "@/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/build/moddev/serverRunVmArgs.txt",
-        "-Dfml.modFolders\u003drubius_cobblemon_additions%%/Users/robinschoenmaker/StreatsDesign/Learning Java/rubius-cobblemon-addons/bin/main"
+        "@E:\\rubius-cobblemon-addons\\build\\moddev\\serverRunVmArgs.txt",
+        "-Dfml.modFolders\u003drubius_cobblemon_addons%%E:\\rubius-cobblemon-addons\\bin\\main"
       ],
-      "cwd": "${workspaceFolder}/run",
+      "cwd": "${workspaceFolder}\\run",
       "env": {},
       "console": "internalConsole",
       "shortenCommandLine": "none"

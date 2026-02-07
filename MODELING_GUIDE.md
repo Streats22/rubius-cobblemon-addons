@@ -34,12 +34,12 @@ Blockbench is a free, user-friendly 3D modeling tool perfect for Minecraft model
 6. **Export**:
    - File → Export → Java Block Model
    - Save as `create_powered_healing_machine.json`
-   - Place in: `src/main/resources/assets/rubius_cobblemon_additions/models/block/`
+   - Place in: `src/main/resources/assets/rubius_cobblemon_addons/models/block/`
 
 7. **Textures**:
    - Export textures from Blockbench
    - Or use existing textures from Cobblemon and Create mods
-   - Place in: `src/main/resources/assets/rubius_cobblemon_additions/textures/block/`
+   - Place in: `src/main/resources/assets/rubius_cobblemon_addons/textures/block/`
 
 ## Option 2: Reference Existing Models
 
@@ -64,13 +64,13 @@ You can try to reference Cobblemon's healing machine block directly. The block m
    - Copy these texture files
 
 3. **Add to Your Mod**:
-   - Create folder: `src/main/resources/assets/rubius_cobblemon_additions/textures/block/`
+   - Create folder: `src/main/resources/assets/rubius_cobblemon_addons/textures/block/`
    - Paste the healing machine textures there
    - Rename them if needed (e.g., `healing_machine_base.png`)
 
 4. **Update the Model**:
    - Edit `create_powered_healing_machine.json`
-   - Use Cobblemon textures for sides: `"north": "rubius_cobblemon_additions:block/healing_machine_base"`
+   - Use Cobblemon textures for sides: `"north": "rubius_cobblemon_addons:block/healing_machine_base"`
    - Use Create cog texture for top: `"up": "create:block/cogwheel"`
    - This gives you the healing machine look with a visible cog on top!
 

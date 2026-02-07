@@ -141,6 +141,8 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 // "optional", meaning it will not be pulled by dependents of this mod.
 configurations {
     runtimeClasspath.extendsFrom localRuntime
+    // KotlinForge as a separate config so we can copy it to run/mods (language providers must be in mods folder)
+    kotlinForgeRuntime
 }
 
 dependencies {
@@ -169,13 +171,10 @@ dependencies {
     // localRuntime files("libs/cobblemon-1.7.2-neoforge.jar")
     
     // KotlinForge - Required language provider for Cobblemon (Kotlin mods)
-    // Cobblemon requires kotlinforforge:5.3 or above
-    // IMPORTANT: Language providers must be in run/mods/ folder at runtime
-    // Download from: https://www.curseforge.com/minecraft/mc-mods/kotlin-for-forge/files
-    // Get NeoForge version for MC 1.21.1, version 5.3 or above
-    // Place it in run/mods/ folder manually, or use CurseForge Maven:
-    // Find the file ID on CurseForge and uncomment below:
-    // localRuntime "curse.maven:kotlin-for-forge-351264:XXXXXX" // Replace XXXXXX with file ID
+    // Cobblemon requires kotlinforforge:5.3 or above. Language providers must be in run/mods/.
+    // CurseForge project 351264: https://www.curseforge.com/minecraft/mc-mods/kotlin-for-forge/files
+    kotlinForgeRuntime "curse.maven:kotlin-for-forge-351264:5978393"  // 5.7.0 for MC 1.21.1 NeoForge
+    localRuntime "curse.maven:kotlin-for-forge-351264:5978393"
     
     // JEI - Optional dependency for recipe viewing and tooltips
     // Using CurseForge Maven for JEI
@@ -227,6 +226,15 @@ publishing {
         }
     }
 }
+
+// Copy KotlinForge into run/mods so Cobblemon can load (language provider must be in mods folder)
+tasks.register('copyKotlinForgeToRunMods', Copy) {
+    from configurations.kotlinForgeRuntime
+    into layout.projectDirectory.dir('run/mods')
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+tasks.named('runClient').configure { dependsOn 'copyKotlinForgeToRunMods' }
+tasks.named('runServer').configure { dependsOn 'copyKotlinForgeToRunMods' }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation

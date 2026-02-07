@@ -4,7 +4,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-This is a NeoForge mod for Minecraft 1.21.1 that adds integrations between Cobblemon and Create mods. The mod is called "Rubius Cobblemon Additions" (mod ID: `the_rubius_cobblemon_additions`).
+This is a NeoForge mod for Minecraft 1.21.1 that adds integrations between Cobblemon and Create mods. The mod is called "Rubius Cobblemon Additions" (mod ID: `rubius_cobblemon_addons`).
 
 **Key Technologies:**
 - NeoForge 21.1.215 (Minecraft modding framework)
@@ -55,7 +55,7 @@ This is a NeoForge mod for Minecraft 1.21.1 that adds integrations between Cobbl
 
 **Option 2:** The project uses **Maven** for Cobblemon (Impact Maven); no JAR in `libs/` is required. If the IDE reports a missing `libs/cobblemon-1.7.1-neoforge.jar`, run **Java: Clean Java Language Server Workspace** (VS Code) or refresh Gradle / invalidate caches (IntelliJ). See `libs/README.md`.
 
-**KotlinForge Requirement:** Cobblemon requires KotlinForge language provider. Download from CurseForge and place in `run/mods/` folder for runtime.
+**KotlinForge Requirement:** Cobblemon requires KotlinForge 5.3+ (language provider). The build adds it via `build.gradle` and the task `copyKotlinForgeToRunMods` copies it to `run/mods/`. Running `runClient` or `runServer` runs that task first. If you add Cobblemon manually to `run/mods/`, also ensure KotlinForge is there (or run `./gradlew copyKotlinForgeToRunMods`).
 
 ## Code Architecture
 
@@ -72,7 +72,7 @@ nl.streats1.rubiusaddons/
 ### NeoForge Mod Architecture
 
 **Main Entry Point:** `RubiusCobblemonAdditions` class is annotated with `@Mod` and defines:
-- `MOD_ID = "the_rubius_cobblemon_additions"` - Must match value in `gradle.properties` and `neoforge.mods.toml`
+- `MOD_ID = "rubius_cobblemon_addons"` - Must match value in `gradle.properties` and `neoforge.mods.toml`
 - Event bus subscription for mod lifecycle events
 - Registration of mod components (items, blocks, etc.)
 
@@ -145,7 +145,7 @@ The mod targets Java 21. This is mandatory for Minecraft 1.21.1. Ensure:
 Key Gradle properties in `gradle.properties`:
 - `minecraft_version=1.21.1`
 - `neo_version=21.1.215`
-- `mod_id=the_rubius_cobblemon_additions`
+- `mod_id=rubius_cobblemon_addons`
 - `mod_version=0.0.1`
 - `mod_group_id=nl.streats1.rubiusaddons`
 
@@ -186,7 +186,7 @@ NeoForge includes a game test framework:
 
 ### Build Output
 
-Built mod JAR is located at: `build/libs/the_rubius_cobblemon_additions-<version>.jar`
+Built mod JAR is located at: `build/libs/rubius_cobblemon_addons-<version>.jar`
 
 This JAR can be placed in a Minecraft instance's `mods/` folder.
 
@@ -228,6 +228,13 @@ Ensure KotlinForge 5.3+ JAR is in `run/mods/` folder when running the game
 
 ### Config Not Generating
 Config files are only generated when the game runs, not during build
+
+## Cobblemon Reference (Source Clone)
+
+A local clone of the original Cobblemon project is available at **`e:\cobblemon-main`** for direct reference when implementing or matching Cobblemon behaviour (e.g. healing machine block, block entity, renderer, models, textures).
+
+- **Where to look:** See [COBBLEMON_REFERENCE.md](COBBLEMON_REFERENCE.md) for typical paths (block, block entity, client renderer, assets). The Cobblemon repo is multi-module; the main source usually lives under `common/` and platform code under `neoforge/` (or similar). If your clone only has the root/build-logic, ensure submodules or full repo are pulled to get `common/` and platform modules.
+- **Use it for:** Matching healing machine logic, block state, rendering (e.g. pokeball layout), model structure, texture keys, and Cobblemon API usage.
 
 ## Additional Resources
 
