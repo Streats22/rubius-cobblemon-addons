@@ -54,8 +54,13 @@ public class CobbleDollarsShopScreen extends Screen {
     /** Offer list is in the right panel (blue square); width = panel width minus scrollbar. */
     private static final int LIST_WIDTH = WINDOW_WIDTH - RIGHT_PANEL_X - RIGHT_PANEL_MARGIN - SCROLLBAR_WIDTH - 4;
     private static final int LEFT_STRIP_WIDTH = 66;
-    private static final int TAB_OFFSET_X = 12;
-    private static final int TAB_GAP_Y = 1;
+    /** Left panel positions for selected item + qty + buy. */
+    private static final int LEFT_PANEL_X = 8;
+    private static final int LEFT_PANEL_DETAIL_Y = 28;
+    private static final int LEFT_PANEL_PRICE_Y = 54;
+    private static final int LEFT_PANEL_QTY_X = 44;
+    private static final int LEFT_PANEL_QTY_Y = 52;
+    private static final int LEFT_PANEL_BUY_Y = 64;
     private static final int TAB_H = 30;
     /** Buy/Sell button lives in the left strip bar (next to currency), not in the right panel. */
     private static final int BUY_BUTTON_STRIP_X = 58;
@@ -187,18 +192,18 @@ public class CobbleDollarsShopScreen extends Screen {
         int top = (h - WINDOW_HEIGHT) / 2;
 
         // Right panel: quantity row, then Buy/Sell button below
-        int qtyRowY = top + RIGHT_PANEL_QTY_Y;
-        int rx = left + RIGHT_PANEL_X;
-        amountMinusButton = new InvisibleButton(rx, qtyRowY, 26, 22, Component.literal("−"), b -> adjustQuantity(-1));
+        int qtyRowY = top + LEFT_PANEL_QTY_Y;
+        int rx = left + LEFT_PANEL_X + LEFT_PANEL_QTY_X;
+        amountMinusButton = new InvisibleButton(rx - 14, qtyRowY, 12, 12, Component.literal("−"), b -> adjustQuantity(-1));
         addRenderableWidget(amountMinusButton);
-        quantityBox = new EditBox(minecraft.font, rx + 28, qtyRowY, 40, 22, Component.literal("Qty"));
+        quantityBox = new EditBox(minecraft.font, rx, qtyRowY, 26, 12, Component.literal("Qty"));
         quantityBox.setValue("1");
         quantityBox.setMaxLength(3);
         quantityBox.setBordered(false); // No black box so our quantity row texture shows; remove if your MC version has no setBordered
         addRenderableWidget(quantityBox);
-        amountPlusButton = new InvisibleButton(rx + 70, qtyRowY, 26, 22, Component.literal("+"), b -> adjustQuantity(1));
+        amountPlusButton = new InvisibleButton(rx + 28, qtyRowY, 12, 12, Component.literal("+"), b -> adjustQuantity(1));
         addRenderableWidget(amountPlusButton);
-        actionButton = new TextureOnlyButton(left + BUY_BUTTON_STRIP_X, top + BUY_BUTTON_STRIP_Y, BUY_BUTTON_STRIP_W, BUY_BUTTON_STRIP_H, Component.translatable("gui.rubius_cobblemon_additions.buy"), this::onAction);
+        actionButton = new TextureOnlyButton(left + LEFT_PANEL_X + 70, top + LEFT_PANEL_BUY_Y, 40, 14, Component.translatable("gui.rubius_cobblemon_additions.buy"), this::onAction);
         addRenderableWidget(actionButton);
 
         // Close button (top-right)
@@ -277,13 +282,14 @@ public class CobbleDollarsShopScreen extends Screen {
         // Left strip: text only (no bank/logo textures)
         int stripX = left + 8;
         guiGraphics.drawString(font, Component.translatable("gui.rubius_cobblemon_additions.shop"), stripX, top + 6, 0xFFE0E0E0, false);
-        guiGraphics.drawString(font, formatPrice(balance) + getCurrencySymbol(), stripX, top - 50, 0xFF00DD00, false);
+        guiGraphics.drawString(font, formatPrice(balance) + getCurrencySymbol(), stripX, top + 20, 0xFF00DD00, false);
 
-        // Tab bar: Buy above Sell (stacked vertically)
-        int tabX = left + LEFT_STRIP_WIDTH + 6 + TAB_OFFSET_X;
+        // Tab bar: Buy above middle panel, Sell above right panel (like target)
         int tabY = top + 4;
-        guiGraphics.drawString(font, Component.translatable("gui.rubius_cobblemon_additions.buy"), tabX, tabY + (TAB_H - font.lineHeight) / 2, selectedTab == 0 ? 0xFFE0E0E0 : 0xFFA0A0A0, false);
-        guiGraphics.drawString(font, Component.translatable("gui.rubius_cobblemon_additions.sell"), tabX, tabY + TAB_H + TAB_GAP_Y + (TAB_H - font.lineHeight) / 2, selectedTab == 1 ? 0xFFE0E0E0 : 0xFFA0A0A0, false);
+        int tabBuyX = left + LEFT_STRIP_WIDTH + 6;
+        int tabSellX = left + RIGHT_PANEL_X + 6;
+        guiGraphics.drawString(font, Component.translatable("gui.rubius_cobblemon_additions.buy"), tabBuyX, tabY + (TAB_H - font.lineHeight) / 2, selectedTab == 0 ? 0xFFE0E0E0 : 0xFFA0A0A0, false);
+        guiGraphics.drawString(font, Component.translatable("gui.rubius_cobblemon_additions.sell"), tabSellX, tabY + (TAB_H - font.lineHeight) / 2, selectedTab == 1 ? 0xFFE0E0E0 : 0xFFA0A0A0, false);
 
         // Offer list: items and text only (no row backgrounds)
         int listTop = top + LIST_TOP_OFFSET;
@@ -344,31 +350,19 @@ public class CobbleDollarsShopScreen extends Screen {
             actionButton.setMessage(Component.translatable(isSellTab() ? "gui.rubius_cobblemon_additions.sell" : "gui.rubius_cobblemon_additions.buy"));
             actionButton.active = selectedIndex >= 0 && selectedIndex < offers.size();
         }
-        // Selected item: icon + price only (no background)
+        // Selected item: show in the left panel (black box area), price below, quantity next to price
         if (selectedIndex >= 0 && selectedIndex < offers.size()) {
             CobbleDollarsShopPayloads.ShopOfferEntry entry = offers.get(selectedIndex);
-            int detailX = left + RIGHT_PANEL_X;
-            int detailY = top + RIGHT_PANEL_DETAIL_Y;
-            final int detailRowH = 24;
-            int iconY = detailY + (detailRowH - LIST_ITEM_ICON_SIZE) / 2;
-            int textY = detailY + (detailRowH - font.lineHeight) / 2;
+            int detailX = left + LEFT_PANEL_X;
+            int detailY = top + LEFT_PANEL_DETAIL_Y;
             ItemStack result = resultStackFrom(entry);
             if (!result.isEmpty()) {
-                guiGraphics.renderItem(result, detailX + OFFER_ROW_PADDING_LEFT, iconY);
-                guiGraphics.renderItemDecorations(font, result, detailX + OFFER_ROW_PADDING_LEFT, iconY);
+                guiGraphics.renderItem(result, detailX, detailY);
+                guiGraphics.renderItemDecorations(font, result, detailX, detailY);
             }
             long price = priceForDisplay(entry);
             String priceStr = isSellTab() ? "→ " + formatPrice(price) + getCurrencySymbol() : formatPrice(price) + getCurrencySymbol();
-            guiGraphics.drawString(font, priceStr, detailX + OFFER_ROW_PADDING_LEFT + LIST_ITEM_ICON_SIZE + OFFER_ROW_GAP_AFTER_ICON, textY + PRICE_TEXT_OFFSET_Y, 0xFFFFFFFF, false);
-            if (!isSellTab()) {
-                ItemStack costB = costBStackFrom(entry);
-                if (!costB.isEmpty()) {
-                    int costBX = detailX + OFFER_ROW_PADDING_LEFT + LIST_ITEM_ICON_SIZE + OFFER_ROW_GAP_AFTER_ICON + font.width(priceStr) + OFFER_ROW_GAP_AFTER_ICON;
-                    guiGraphics.drawString(font, "+", costBX - 2, textY + PRICE_TEXT_OFFSET_Y, 0xFFAAAAAA, false);
-                    guiGraphics.renderItem(costB, costBX + 2, iconY);
-                    guiGraphics.renderItemDecorations(font, costB, costBX + 2, iconY);
-                }
-            }
+            guiGraphics.drawString(font, priceStr, detailX, top + LEFT_PANEL_PRICE_Y, 0xFFFFFFFF, false);
         }
 
         // Player inventory
@@ -382,7 +376,7 @@ public class CobbleDollarsShopScreen extends Screen {
         if (minecraft == null || minecraft.player == null) return;
         var inv = minecraft.player.getInventory();
         int invTop = top + TRADE_PANEL_HEIGHT - 19;
-        int invLeft = left + 2;
+        int invLeft = left + 4;
         final int slotSpacingX = INVENTORY_SLOT_SPACING;
         final int slotSpacingY = INVENTORY_SLOT_SPACING;
         final int itemInset = (slotSpacingX - LIST_ITEM_ICON_SIZE) / 3;
@@ -446,19 +440,21 @@ public class CobbleDollarsShopScreen extends Screen {
         int left = (guiWidth() - WINDOW_WIDTH) / 2;
         int top = (guiHeight() - WINDOW_HEIGHT) / 2;
         int listTop = top + LIST_TOP_OFFSET;
-        int tabX = left + LEFT_STRIP_WIDTH + 6 + TAB_OFFSET_X;
         int tabY = top + 4;
-        int tabW = RIGHT_PANEL_X - (LEFT_STRIP_WIDTH + 8);
+        int tabBuyX = left + LEFT_STRIP_WIDTH + 6;
+        int tabSellX = left + RIGHT_PANEL_X + 6;
+        int tabBuyW = RIGHT_PANEL_X - (LEFT_STRIP_WIDTH + 8);
+        int tabSellW = WINDOW_WIDTH - RIGHT_PANEL_X - RIGHT_PANEL_MARGIN;
 
-        if (mouseX >= tabX && mouseX < tabX + tabW) {
-            if (mouseY >= tabY && mouseY < tabY + TAB_H) {
+        if (mouseY >= tabY && mouseY < tabY + TAB_H) {
+            if (mouseX >= tabBuyX && mouseX < tabBuyX + tabBuyW) {
                 selectedTab = 0;
                 var off = currentOffers();
                 selectedIndex = off.isEmpty() ? -1 : 0;
                 scrollOffset = 0;
                 return true;
             }
-            if (mouseY >= tabY + TAB_H + TAB_GAP_Y && mouseY < tabY + TAB_H + TAB_GAP_Y + TAB_H) {
+            if (mouseX >= tabSellX && mouseX < tabSellX + tabSellW) {
                 selectedTab = 1;
                 var off = currentOffers();
                 selectedIndex = off.isEmpty() ? -1 : 0;
