@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
-import java.util.UUID;
+import java.math.BigInteger;
 
 /**
  * Optional integration with CobbleDollars mod (https://modrinth.com/mod/cobbledollars).
@@ -23,7 +23,7 @@ public final class CobbleDollarsIntegration {
     @Nullable
     private static MethodHandle getBalanceHandle = null;
     @Nullable
-    private static MethodHandle addBalanceHandle = null;
+    private static MethodHandle setBalanceHandle = null;
     private static boolean reflectionResolved = false;
 
     private CobbleDollarsIntegration() {}
@@ -44,67 +44,51 @@ public final class CobbleDollarsIntegration {
 
     /**
      * Resolves CobbleDollars balance API via reflection. Tries common API patterns.
-     * Call once when first needed (e.g. on first trade).
+     * Call once when first needed (e.g. on first trade). Only runs when mod is loaded.
      */
     private static void resolveReflection() {
-        if (reflectionResolved || isModLoaded()) {
-            reflectionResolved = true;
-            return;
-        }
+        if (reflectionResolved) return;
         reflectionResolved = true;
+        if (!isModLoaded()) return;
 
+        // CobbleDollars 2.x exposes Kotlin extension methods on PlayerExtensionKt: getCobbleDollars(Player), setCobbleDollars(Player, BigInteger)
         String[] possibleClassNames = {
+                "fr.harmex.cobbledollars.common.utils.extensions.PlayerExtensionKt",
+                "fr.harmex.cobbledollars.api.CobbleDollarsAPI",
+                "fr.harmex.cobbledollars.common.CobbleDollars",
+                "fr.harmex.cobbledollars.common.utils.MoneyUtil",
                 "com.harmex.cobbledollars.CobbleDollars",
-                "com.harmex.cobbledollars.api.CobbleDollarsAPI",
-                "harmex.cobbledollars.CobbleDollars",
-                "com.harmex.cobbledollars.util.MoneyUtil",
-                "com.harmex.cobbledollars.common.CobbleDollars"
+                "com.harmex.cobbledollars.api.CobbleDollarsAPI"
         };
 
         for (String className : possibleClassNames) {
             try {
                 Class<?> apiClass = Class.forName(className);
-                // Try getBalance(Player) or getBalance(UUID)
+                Class<?> bigIntegerClass = BigInteger.class;
                 for (Method m : apiClass.getMethods()) {
-                    String name = m.getName().toLowerCase();
-                    if ((name.equals("getbalance") || name.equals("get")) && m.getParameterCount() >= 1) {
-                        Class<?> param = m.getParameterTypes()[0];
-                        if (Player.class.isAssignableFrom(param) || param == UUID.class || param == ServerPlayer.class) {
-                            getBalanceHandle = MethodHandles.lookup().unreflect(m);
-                            break;
-                        }
-                    }
-                    if ((name.equals("addbalance") || name.equals("add") || name.equals("subtract") || name.equals("setbalance") || name.equals("set")) && m.getParameterCount() >= 2) {
-                        Class<?> p0 = m.getParameterTypes()[0];
-                        Class<?> p1 = m.getParameterTypes()[1];
-                        if ((Player.class.isAssignableFrom(p0) || p0 == UUID.class) && (p1 == long.class || p1 == int.class)) {
-                            addBalanceHandle = MethodHandles.lookup().unreflect(m);
-                            break;
-                        }
-                    }
-                }
-                if (getBalanceHandle != null && addBalanceHandle != null) break;
-                // Try static methods on same class
-                for (Method m : apiClass.getMethods()) {
-                    if (java.lang.reflect.Modifier.isStatic(m.getModifiers())) {
-                        String name = m.getName().toLowerCase();
-                        if (name.equals("getbalance") || name.equals("get")) {
-                            if (m.getParameterCount() == 1 && (m.getParameterTypes()[0] == UUID.class || Player.class.isAssignableFrom(m.getParameterTypes()[0]))) {
-                                getBalanceHandle = MethodHandles.lookup().unreflect(m);
+                    if (java.lang.reflect.Modifier.isStatic(m.getModifiers()) && m.getParameterCount() >= 1) {
+                        String name = m.getName();
+                        Class<?>[] params = m.getParameterTypes();
+                        // getCobbleDollars(Player) -> BigInteger
+                        if ((name.equals("getCobbleDollars") || name.equals("getBalance") || name.equals("get")) && params.length == 1) {
+                            if (Player.class.isAssignableFrom(params[0]) && (m.getReturnType() == long.class || m.getReturnType() == int.class || m.getReturnType() == bigIntegerClass)) {
+                                getBalanceHandle = MethodHandles.publicLookup().unreflect(m);
                             }
-                        } else if (name.equals("addbalance") || name.equals("add") || name.equals("subtract")) {
-                            if (m.getParameterCount() >= 2) {
-                                addBalanceHandle = MethodHandles.lookup().unreflect(m);
+                        }
+                        // setCobbleDollars(Player, BigInteger) or setBalance(Player, long)
+                        if ((name.equals("setCobbleDollars") || name.equals("setBalance") || name.equals("set")) && params.length == 2) {
+                            if (Player.class.isAssignableFrom(params[0]) && (params[1] == long.class || params[1] == int.class || params[1] == bigIntegerClass)) {
+                                setBalanceHandle = MethodHandles.publicLookup().unreflect(m);
                             }
                         }
                     }
                 }
-                if (getBalanceHandle != null) break;
+                if (getBalanceHandle != null && setBalanceHandle != null) break;
             } catch (Throwable ignored) {
             }
         }
 
-        if (getBalanceHandle == null || addBalanceHandle == null) {
+        if (getBalanceHandle == null || setBalanceHandle == null) {
             RubiusCobblemonAdditions.LOGGER.debug("CobbleDollars mod is loaded but balance API could not be resolved. Villager CobbleDollars payment will be disabled.");
         }
     }
@@ -113,15 +97,15 @@ public final class CobbleDollarsIntegration {
      * Gets the CobbleDollars balance for the given player. Returns -1 if mod not loaded or API unavailable.
      */
     public static long getBalance(Player player) {
-        if (isModLoaded() || !(player instanceof ServerPlayer)) return -1;
+        if (!isModLoaded() || !(player instanceof ServerPlayer)) return -1;
         resolveReflection();
         if (getBalanceHandle == null) return -1;
         try {
-            Object arg = player;
-            if (getBalanceHandle.type().parameterType(0) == UUID.class) {
-                arg = player.getUUID();
+            Object result = getBalanceHandle.invoke(player);
+            if (result instanceof BigInteger bi) {
+                if (bi.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0) return Long.MAX_VALUE;
+                return bi.longValue();
             }
-            Object result = getBalanceHandle.invoke(arg);
             if (result instanceof Number n) return n.longValue();
             return -1;
         } catch (Throwable t) {
@@ -135,17 +119,25 @@ public final class CobbleDollarsIntegration {
      * Returns true if the operation succeeded.
      */
     public static boolean addBalance(Player player, long amount) {
-        if (isModLoaded() || !(player instanceof ServerPlayer)) return true;
+        if (!isModLoaded() || !(player instanceof ServerPlayer)) return false;
         resolveReflection();
-        if (addBalanceHandle == null) return true;
+        if (getBalanceHandle == null || setBalanceHandle == null) return false;
         try {
-            Class<?> p0 = addBalanceHandle.type().parameterType(0);
-            Object arg0 = p0 == UUID.class ? player.getUUID() : player;
-            addBalanceHandle.invoke(arg0, amount);
-            return false;
+            Object current = getBalanceHandle.invoke(player);
+            BigInteger currentBi = current instanceof BigInteger ? (BigInteger) current : BigInteger.valueOf(((Number) current).longValue());
+            BigInteger newBalance = currentBi.add(BigInteger.valueOf(amount));
+            if (newBalance.signum() < 0) return false;
+            Class<?> secondParam = setBalanceHandle.type().parameterType(1);
+            if (secondParam == BigInteger.class) {
+                setBalanceHandle.invoke(player, newBalance);
+            } else {
+                long clamped = newBalance.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0 ? Long.MAX_VALUE : newBalance.longValue();
+                setBalanceHandle.invoke(player, secondParam == long.class ? clamped : (int) clamped);
+            }
+            return true;
         } catch (Throwable t) {
             RubiusCobblemonAdditions.LOGGER.debug("CobbleDollars addBalance failed", t);
-            return true;
+            return false;
         }
     }
 
@@ -153,8 +145,8 @@ public final class CobbleDollarsIntegration {
      * Returns true if we can get and modify CobbleDollars balance (mod loaded and API resolved).
      */
     public static boolean isAvailable() {
-        if (isModLoaded()) return true;
+        if (!isModLoaded()) return false;
         resolveReflection();
-        return getBalanceHandle == null || addBalanceHandle == null;
+        return getBalanceHandle != null && setBalanceHandle != null;
     }
 }

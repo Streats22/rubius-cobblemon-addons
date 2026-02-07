@@ -22,7 +22,7 @@ public final class VillagerCobbleDollarsHandler {
     public static void onTradeWithVillager(TradeWithVillagerEvent event) {
         if (event.getEntity().level().isClientSide()) return;
         if (!Config.VILLAGERS_ACCEPT_COBBLEDOLLARS.get()) return;
-        if (CobbleDollarsIntegration.isAvailable()) return;
+        if (!CobbleDollarsIntegration.isAvailable()) return;
 
         Player player = event.getEntity();
         if (!(player instanceof ServerPlayer serverPlayer)) return;
@@ -38,7 +38,7 @@ public final class VillagerCobbleDollarsHandler {
         long balance = CobbleDollarsIntegration.getBalance(serverPlayer);
         if (balance < cobbleDollarsCost) return;
 
-        if (CobbleDollarsIntegration.addBalance(serverPlayer, -cobbleDollarsCost)) return;
+        if (!CobbleDollarsIntegration.addBalance(serverPlayer, -cobbleDollarsCost)) return;
 
         // Refund the emeralds so the player effectively paid with CobbleDollars
         ItemStack refund = new ItemStack(Objects.requireNonNull(Items.EMERALD), emeraldCount);

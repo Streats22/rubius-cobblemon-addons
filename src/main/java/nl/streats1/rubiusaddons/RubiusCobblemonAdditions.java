@@ -111,7 +111,7 @@ public class RubiusCobblemonAdditions {
 
     private void handleVillagerShopInteract(net.minecraft.world.entity.Entity target, boolean isClientSide,
             Runnable cancelAction, java.util.function.IntSupplier getId) {
-        if (!Config.USE_COBBLEDOLLARS_SHOP_UI.get() || CobbleDollarsIntegration.isModLoaded()) return;
+        if (!Config.USE_COBBLEDOLLARS_SHOP_UI.get() || !CobbleDollarsIntegration.isModLoaded()) return;
         if (!(target instanceof Villager) && !(target instanceof WanderingTrader)) return;
 
         cancelAction.run();

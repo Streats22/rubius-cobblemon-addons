@@ -57,7 +57,7 @@ public final class CobbleDollarsShopPayloadHandlers {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer serverPlayer)) return;
             if (!Config.VILLAGERS_ACCEPT_COBBLEDOLLARS.get()) return;
-            if (CobbleDollarsIntegration.isAvailable()) return;
+            if (!CobbleDollarsIntegration.isAvailable()) return;
 
             long balance = CobbleDollarsIntegration.getBalance(serverPlayer);
             if (balance < 0) balance = 0;
@@ -70,7 +70,7 @@ public final class CobbleDollarsShopPayloadHandlers {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer serverPlayer)) return;
             if (!Config.VILLAGERS_ACCEPT_COBBLEDOLLARS.get()) return;
-            if (CobbleDollarsIntegration.isAvailable()) return;
+            if (!CobbleDollarsIntegration.isAvailable()) return;
             if (data.quantity() < 1) return;
 
             ServerLevel level = serverPlayer.serverLevel();
@@ -95,7 +95,7 @@ public final class CobbleDollarsShopPayloadHandlers {
             long balance = CobbleDollarsIntegration.getBalance(serverPlayer);
             if (balance < cost) return;
 
-            if (CobbleDollarsIntegration.addBalance(serverPlayer, -cost)) return;
+            if (!CobbleDollarsIntegration.addBalance(serverPlayer, -cost)) return;
 
             ItemStack result = offer.getResult().copy();
             result.setCount(result.getCount() * data.quantity());
