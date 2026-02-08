@@ -54,20 +54,23 @@ public class CobbleDollarsShopScreen extends Screen {
     /** Offer list is in the right panel (blue square); width = panel width minus scrollbar. */
     private static final int LIST_WIDTH = WINDOW_WIDTH - RIGHT_PANEL_X - RIGHT_PANEL_MARGIN - SCROLLBAR_WIDTH - 4;
     private static final int LEFT_STRIP_WIDTH = 66;
+    private static final int TAB_OFFSET_X = 10;
+    private static final int TAB_OUTLINE_OFFSET_X = -2;
+    private static final int TAB_OUTLINE_OFFSET_Y = -4;
     /** Left panel positions for selected item + qty + buy. */
     private static final int LEFT_PANEL_X = 8;
-    private static final int LEFT_PANEL_DETAIL_Y = 28;
-    private static final int LEFT_PANEL_PRICE_Y = 54;
+    private static final int LEFT_PANEL_DETAIL_Y = 32;
+    private static final int LEFT_PANEL_PRICE_Y = 34;
     private static final int LEFT_PANEL_QTY_X = 44;
     private static final int LEFT_PANEL_QTY_Y = 52;
-    private static final int LEFT_PANEL_BUY_Y = 64;
+    private static final int LEFT_PANEL_BUY_Y = 70;
     private static final int TAB_H = 30;
     /** Buy/Sell button lives in the left strip bar (next to currency), not in the right panel. */
     private static final int BUY_BUTTON_STRIP_X = 58;
     private static final int BUY_BUTTON_STRIP_Y = 34;
     private static final int BUY_BUTTON_STRIP_W = 52;
     private static final int BUY_BUTTON_STRIP_H = 20;
-    private static final int LIST_LEFT_OFFSET = RIGHT_PANEL_X;
+    private static final int LIST_LEFT_OFFSET = 190;
     private static final int LIST_ITEM_ICON_SIZE = 16;
 
     /** Alignment: content padding inside offer_background (73x16). Match CobbleDollars-style row content. */
@@ -203,7 +206,7 @@ public class CobbleDollarsShopScreen extends Screen {
         addRenderableWidget(quantityBox);
         amountPlusButton = new InvisibleButton(rx + 28, qtyRowY, 12, 12, Component.literal("+"), b -> adjustQuantity(1));
         addRenderableWidget(amountPlusButton);
-        actionButton = new TextureOnlyButton(left + LEFT_PANEL_X + 70, top + LEFT_PANEL_BUY_Y, 40, 14, Component.translatable("gui.rubius_cobblemon_additions.buy"), this::onAction);
+        actionButton = new TextureOnlyButton(left + LEFT_PANEL_X + 66, top + LEFT_PANEL_BUY_Y, 40, 14, Component.translatable("gui.rubius_cobblemon_additions.buy"), this::onAction);
         addRenderableWidget(actionButton);
 
         // Close button (top-right)
@@ -284,12 +287,22 @@ public class CobbleDollarsShopScreen extends Screen {
         guiGraphics.drawString(font, Component.translatable("gui.rubius_cobblemon_additions.shop"), stripX, top + 6, 0xFFE0E0E0, false);
         guiGraphics.drawString(font, formatPrice(balance) + getCurrencySymbol(), stripX, top + 20, 0xFF00DD00, false);
 
-        // Tab bar: Buy above middle panel, Sell above right panel (like target)
+        // Tab bar: Buy above Sell (stacked vertically) with category textures
+        int tabX = left + LEFT_STRIP_WIDTH + 5 + TAB_OFFSET_X;
         int tabY = top + 4;
-        int tabBuyX = left + LEFT_STRIP_WIDTH + 6;
-        int tabSellX = left + RIGHT_PANEL_X + 6;
-        guiGraphics.drawString(font, Component.translatable("gui.rubius_cobblemon_additions.buy"), tabBuyX, tabY + (TAB_H - font.lineHeight) / 2, selectedTab == 0 ? 0xFFE0E0E0 : 0xFFA0A0A0, false);
-        guiGraphics.drawString(font, Component.translatable("gui.rubius_cobblemon_additions.sell"), tabSellX, tabY + (TAB_H - font.lineHeight) / 2, selectedTab == 1 ? 0xFFE0E0E0 : 0xFFA0A0A0, false);
+        int tabGapY = 2;
+        int buyY = tabY;
+        int sellY = tabY + TAB_H + tabGapY;
+        // Backgrounds (inactive) + outline for active tab
+        blitFull(guiGraphics, TEX_CATEGORY_BG, tabX, buyY, TEX_CATEGORY_BG_W, TEX_CATEGORY_BG_H);
+        blitFull(guiGraphics, TEX_CATEGORY_BG, tabX, sellY, TEX_CATEGORY_BG_W, TEX_CATEGORY_BG_H);
+        if (selectedTab == 0) {
+            blitStretched(guiGraphics, TEX_CATEGORY_OUTLINE, tabX + TAB_OUTLINE_OFFSET_X, buyY + TAB_OUTLINE_OFFSET_Y, TEX_CATEGORY_OUTLINE_W, TEX_CATEGORY_OUTLINE_H, TEX_CATEGORY_OUTLINE_W, TEX_CATEGORY_OUTLINE_H);
+        } else {
+            blitStretched(guiGraphics, TEX_CATEGORY_OUTLINE, tabX + TAB_OUTLINE_OFFSET_X, sellY + TAB_OUTLINE_OFFSET_Y, TEX_CATEGORY_OUTLINE_W, TEX_CATEGORY_OUTLINE_H, TEX_CATEGORY_OUTLINE_W, TEX_CATEGORY_OUTLINE_H);
+        }
+        guiGraphics.drawString(font, Component.translatable("gui.rubius_cobblemon_additions.buy"), tabX + 4, buyY + (TAB_H - font.lineHeight) / 2, selectedTab == 0 ? 0xFFE0E0E0 : 0xFFA0A0A0, false);
+        guiGraphics.drawString(font, Component.translatable("gui.rubius_cobblemon_additions.sell"), tabX + 4, sellY + (TAB_H - font.lineHeight) / 2, selectedTab == 1 ? 0xFFE0E0E0 : 0xFFA0A0A0, false);
 
         // Offer list: items and text only (no row backgrounds)
         int listTop = top + LIST_TOP_OFFSET;
@@ -440,21 +453,20 @@ public class CobbleDollarsShopScreen extends Screen {
         int left = (guiWidth() - WINDOW_WIDTH) / 2;
         int top = (guiHeight() - WINDOW_HEIGHT) / 2;
         int listTop = top + LIST_TOP_OFFSET;
+        int tabX = left + LEFT_STRIP_WIDTH + 5 + TAB_OFFSET_X;
         int tabY = top + 4;
-        int tabBuyX = left + LEFT_STRIP_WIDTH + 6;
-        int tabSellX = left + RIGHT_PANEL_X + 6;
-        int tabBuyW = RIGHT_PANEL_X - (LEFT_STRIP_WIDTH + 8);
-        int tabSellW = WINDOW_WIDTH - RIGHT_PANEL_X - RIGHT_PANEL_MARGIN;
+        int tabW = RIGHT_PANEL_X - (LEFT_STRIP_WIDTH + 8);
+        int tabGapY = 2;
 
-        if (mouseY >= tabY && mouseY < tabY + TAB_H) {
-            if (mouseX >= tabBuyX && mouseX < tabBuyX + tabBuyW) {
+        if (mouseX >= tabX && mouseX < tabX + tabW) {
+            if (mouseY >= tabY && mouseY < tabY + TAB_H) {
                 selectedTab = 0;
                 var off = currentOffers();
                 selectedIndex = off.isEmpty() ? -1 : 0;
                 scrollOffset = 0;
                 return true;
             }
-            if (mouseX >= tabSellX && mouseX < tabSellX + tabSellW) {
+            if (mouseY >= tabY + TAB_H + tabGapY && mouseY < tabY + TAB_H + tabGapY + TAB_H) {
                 selectedTab = 1;
                 var off = currentOffers();
                 selectedIndex = off.isEmpty() ? -1 : 0;
